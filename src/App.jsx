@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useUser } from '@clerk/clerk-react';
 import Landing from './pages/Landing';
@@ -53,7 +54,7 @@ export default function App() {
             console.log('Firebase UID:', fbUser.uid);
           }
         });
-      } catch (error) {
+      } catch {
         // Firebase not configured/installed; skip logging
       }
     })();
