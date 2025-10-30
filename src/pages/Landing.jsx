@@ -1,8 +1,18 @@
+import Hero from '../components/Hero';
+import FeatureGrid from '../components/FeatureGrid';
 import { useEffect } from 'react';
 import { useUser, SignInButton } from '@clerk/clerk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Landing() {
+  const features = [
+    { title: 'Smart AI Roadmap Generator', icon: 'spark' },
+    { title: 'Seamless Authentication', icon: 'shield' },
+    { title: 'Dynamic Onboarding Flow', icon: 'flow' },
+    { title: 'AI-Powered Resource Finder', icon: 'search' },
+    { title: 'Interactive Mock Interviews', icon: 'chat' },
+    { title: 'Personalized Feedback Reports', icon: 'report' },
+  ];
   const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
   const { pathname } = useLocation();
@@ -19,18 +29,9 @@ export default function Landing() {
   }, [isSignedIn, onboardingCompleted, pathname, navigate]);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-blue-300">
-      <h1 className="text-4xl font-bold mb-2">AlgoGuide</h1>
-      <p className="mb-6 text-gray-700 text-lg text-center max-w-xl">
-        Your personalized, AI-powered placement preparation guide! Get a custom roadmap, best resources, and interactive mock interviews tailored just for you.
-      </p>
-      <SignInButton mode="modal">
-        <button
-          className="px-5 py-2 bg-blue-700 text-white rounded-md shadow hover:bg-blue-900 transition font-semibold"
-        >
-          Get Started
-        </button>
-      </SignInButton>
-    </div>
+    <main>
+      <Hero heroImageSrc="/assets/0_SrT98pfmh6s3xHTU.jpg" />
+      <FeatureGrid features={features} />
+    </main>
   );
 }
