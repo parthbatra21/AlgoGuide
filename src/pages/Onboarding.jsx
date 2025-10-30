@@ -123,24 +123,55 @@ export default function Onboarding() {
     try {
       const base = import.meta.env.VITE_ONBOARDING_ENDPOINT || '/api';
       if (base && email) {
+        // First request: Save user answers
         const url = `${String(base).replace(/\/$/, '')}/users/${encodeURIComponent(email)}/answers`;
         await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
           body: JSON.stringify(payload),
         });
+
+        // Second request: Generate resources by email
+        const generateResourcesUrl = `${String(base).replace(/\/$/, '')}/generate-resources-by-email/${encodeURIComponent(email)}`;
+        await fetch(generateResourcesUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+        });
+
+        // Third request: Get home data by email
+        const homeUrl = `http://localhost:8000/home-by-email/${encodeURIComponent(email)}`;
+        await fetch(homeUrl, {
+          method: 'GET',
+          headers: { 'Accept': 'application/json' },
+        });
+      }
+      
+      // Only mark onboarding as completed if all requests succeeded
+      console.log('All onboarding requests completed successfully');
+      
+      try {
+        console.log('Updating user metadata: onboardingCompleted = true');
+        await user?.update({ 
+          unsafeMetadata: { 
+            ...(user?.unsafeMetadata || {}), 
+            onboardingCompleted: true 
+          } 
+        });
+        await user?.reload?.();
+        console.log('User metadata updated successfully');
+        
+        // Only navigate after successful metadata update
+        setSubmitting(false);
+        navigate('/dashboard', { replace: true });
+      } catch (metadataErr) {
+        console.error('Failed to update user metadata', metadataErr);
+        setSubmitting(false);
+        // Don't navigate if metadata update failed
       }
     } catch (err) {
-      console.error('Onboarding POST failed', err);
-    } finally {
-      try {
-        await user?.update({ unsafeMetadata: { ...(user?.unsafeMetadata || {}), onboardingCompleted: true } });
-        await user?.reload?.();
-      } catch (err) {
-        console.error('Failed to update user metadata', err);
-      }
+      console.error('Onboarding request sequence failed', err);
       setSubmitting(false);
-      navigate('/dashboard', { replace: true });
+      // Don't update metadata or navigate if requests failed
     }
   }
 
