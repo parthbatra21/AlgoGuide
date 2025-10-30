@@ -1,14 +1,13 @@
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { useUser, SignIn, SignUp } from '@clerk/clerk-react';
-import { useEffect } from 'react';
+import { useUser } from '@clerk/clerk-react';
 import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
+import SignInPage from './pages/SignIn';
 
 function ProtectedRoute({ children }) {
-  const { isSignedIn, isLoaded } = useUser();
-  if (!isLoaded) return null;
-  return isSignedIn ? children : <Navigate to="/sign-in" replace />;
+  const { isSignedIn } = useUser();
+  return isSignedIn ? children : <Navigate to="/signin" replace />;
 }
 
 function OnboardingGuard({ children }) {
@@ -67,22 +66,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route
-          path="/sign-in"
-          element={
-            <AuthPageGuard>
-              <SignIn routing="path" path="/sign-in" />
-            </AuthPageGuard>
-          }
-        />
-        <Route
-          path="/sign-up"
-          element={
-            <AuthPageGuard>
-              <SignUp routing="path" path="/sign-up" />
-            </AuthPageGuard>
-          }
-        />
+        <Route path="/signin" element={<SignInPage />} />
         <Route
           path="/dashboard"
           element={
