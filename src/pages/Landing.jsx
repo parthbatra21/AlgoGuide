@@ -1,16 +1,22 @@
 import { useEffect } from 'react';
 import { useUser, SignInButton } from '@clerk/clerk-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function Landing() {
-  const { isSignedIn } = useUser();
+  const { isSignedIn, user } = useUser();
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const onboardingCompleted = Boolean(user?.publicMetadata?.onboardingCompleted);
 
   useEffect(() => {
-    if (isSignedIn) {
-      navigate('/dashboard', { replace: true });
+    if (isSignedIn && pathname === "/") {
+      if (onboardingCompleted) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        navigate('/onboarding', { replace: true });
+      }
     }
-  }, [isSignedIn, navigate]);
+  }, [isSignedIn, onboardingCompleted, pathname, navigate]);
 
   return (
     <div className="min-h-screen flex flex-col justify-center items-center bg-gradient-to-br from-blue-100 to-blue-300">
