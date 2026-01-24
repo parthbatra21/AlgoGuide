@@ -1,3 +1,34 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Theme tokens: soft purple background + purple primary text */
+:root {
+  --bg-gradient-start: #0b1220; /* deep space blue */
+  --bg-gradient-end: #0a0f1c;   /* darker nebula blue */
+  --text-primary: #f8fafc;      /* brighter light text */
+  --muted: #cbd5e1;             /* lighter muted for contrast */
+  --accent: #22d3ee;            /* cyan accent for glows */
+}
+
+/* App background similar to the provided reference */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  /* layered futuristic backdrop: cyan/blue glows + deep gradient */
+  background-image:
+    radial-gradient(1200px 600px at 70% 28%, rgba(34,211,238,0.15), transparent 60%),
+    radial-gradient(900px 500px at 15% 75%, rgba(59,130,246,0.12), transparent 60%),
+    linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+  background-attachment: fixed;
+}
+
+/* Respect reduced motion for our entrance animations */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-fade-in-up,
+  .motion-safe\:animate-fade-in-left {
+    animation: none !important;
+  }
+}
