@@ -1,3 +1,20 @@
+## Algo Guide Landing Page
+
+This repo includes a responsive, accessible hero-style landing page built with React + Tailwind CSS.
+
+### Swap the hero image
+- Place your asset in `public/assets/`.
+- Update the file to `public/assets/hero-algo-guide.png` to match the default prop used by `Hero`. Alternatively, pass a different `heroImageSrc` to `Hero` or change it in `src/pages/Landing.jsx`.
+- A placeholder SVG is provided at `public/assets/hero-algo-guide.svg`.
+
+### Change the CTA target
+- All primary CTAs use the reusable `CTAButton` component and point to `/signin`.
+- If your auth entry route differs, change the `href` prop where `CTAButton` is used (e.g., in `src/components/Hero.jsx`) or update the default prop in `CTAButton`.
+
+### Notes
+- There is no top navigation on the landing page by design.
+- Keyboard focus styles and motion-safe animations are enabled. Users who prefer reduced motion will not see entrance animations.
+
 # React + Vite
 
 This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
