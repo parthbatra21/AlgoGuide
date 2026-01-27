@@ -40,11 +40,10 @@ export default function SignInPage() {
   return (
     <main className="min-h-screen grid place-items-center bg-gradient-to-br from-[color:var(--bg-gradient-start)] to-[color:var(--bg-gradient-end)] px-6 py-12">
       <SignIn 
-        signUpUrl="/signin" 
+        signUpUrl="/signup"
         routing="path" 
         path="/signin"
-        afterSignInUrl="/dashboard"
-        afterSignUpUrl="/onboarding"
+        fallbackRedirectUrl="/dashboard"
       />
     </main>
   );
