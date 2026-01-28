@@ -1,7 +1,29 @@
 import { useUser, UserButton, SignedIn } from '@clerk/clerk-react';
+import { useEffect } from 'react';
 
 export default function Dashboard() {
   const { user } = useUser();
+  useEffect(() => {
+    let unsubscribe;
+    (async () => {
+      try {
+        const authModule = await import(/* @vite-ignore */ 'firebase/auth').catch(() => null);
+        if (!authModule) return;
+        const { getAuth, onAuthStateChanged } = authModule;
+        const auth = getAuth();
+        unsubscribe = onAuthStateChanged(auth, (fbUser) => {
+          if (fbUser?.uid) {
+            console.log('Firebase UID (Dashboard):', fbUser.uid);
+          }
+        });
+      } catch (_) {
+        // Firebase not configured/installed; skip logging
+      }
+    })();
+    return () => {
+      if (typeof unsubscribe === 'function') unsubscribe();
+    };
+  }, []);
   return (
     <div className="min-h-screen flex flex-col items-center bg-gray-50 py-10">
       <header className="w-full flex items-center justify-between px-8 mb-12">
