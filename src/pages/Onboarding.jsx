@@ -134,7 +134,7 @@ export default function Onboarding() {
       console.error('Onboarding POST failed', err);
     } finally {
       try {
-        await user?.update({ publicMetadata: { ...(user?.publicMetadata || {}), onboardingCompleted: true } });
+        await user?.update({ unsafeMetadata: { ...(user?.unsafeMetadata || {}), onboardingCompleted: true } });
         await user?.reload?.();
       } catch (err) {
         console.error('Failed to update user metadata', err);
@@ -145,7 +145,7 @@ export default function Onboarding() {
   }
 
   useEffect(() => {
-    const completed = Boolean(user?.publicMetadata?.onboardingCompleted);
+    const completed = Boolean(user?.unsafeMetadata?.onboardingCompleted);
     if (completed) {
       navigate('/dashboard', { replace: true });
     }
