@@ -31,18 +31,28 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // TODO: Fetch roadmap data from your API endpoint
-    // For now, using sample data structure
     const fetchRoadmap = async () => {
       try {
         const email = user?.primaryEmailAddress?.emailAddress;
         if (!email) return;
         
-        // Replace with your actual API endpoint
-        const response = await fetch(`/api/users/${encodeURIComponent(email)}/roadmap`);
+        // Fetch data from the home endpoint that was called during onboarding
+        const response = await fetch(`http://localhost:8000/home-by-email/${encodeURIComponent(email)}`, {
+          method: 'GET',
+          headers: { 
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+          },
+        });
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('Dashboard data received:', data);
           setRoadmapData(data);
+        } else {
+          console.error('Failed to fetch dashboard data:', response.status, response.statusText);
+          const errorText = await response.text();
+          console.error('Error response body:', errorText);
         }
       } catch (error) {
         console.error('Failed to fetch roadmap:', error);
@@ -51,7 +61,9 @@ export default function Dashboard() {
       }
     };
 
-    fetchRoadmap();
+    if (user?.primaryEmailAddress?.emailAddress) {
+      fetchRoadmap();
+    }
   }, [user]);
 
   const toggleSection = (index) => {
@@ -61,44 +73,90 @@ export default function Dashboard() {
     }));
   };
 
-  // Mock roadmap structure for now
-  const mockRoadmap = {
-    totalProgress: { completed: 0, total: 11 },
-    difficulty: {
-      easy: { completed: 0, total: 0 },
-      medium: { completed: 0, total: 0 },
-      hard: { completed: 0, total: 0 }
-    },
-    steps: [
-      {
-        title: "Step 1: Build Foundation",
-        completed: 0,
-        total: 2,
-        resources: roadmapData?.resources?.general_learning?.slice(0, 2) || []
-      },
-      {
-        title: "Step 2: Strengthen Weak Areas",
-        completed: 0,
-        total: 2,
-        resources: roadmapData?.resources?.general_learning?.slice(2, 4) || []
-      },
-      {
-        title: "Step 3: Company-Specific Prep",
-        completed: 0,
-        total: 3,
-        resources: roadmapData?.resources?.general_learning?.slice(4, 7) || []
-      },
-      {
-        title: "Step 4: Tech Stack Deep Dive",
-        completed: 0,
-        total: 4,
-        resources: roadmapData?.resources?.general_learning?.slice(7, 11) || []
+  // Build roadmap structure from API data
+  const buildRoadmapFromData = () => {
+    if (!roadmapData) {
+      return {
+        totalProgress: { completed: 0, total: 0 },
+        difficulty: {
+          easy: { completed: 0, total: 0 },
+          medium: { completed: 0, total: 0 },
+          hard: { completed: 0, total: 0 }
+        },
+        steps: []
+      };
+    }
+
+    // Extract resources from different categories in the API response
+    const allResources = [];
+    
+    // Check different possible data structures
+    if (roadmapData.resources) {
+      if (roadmapData.resources.general_learning) {
+        allResources.push(...roadmapData.resources.general_learning);
       }
-    ]
+      if (roadmapData.resources.company_specific) {
+        allResources.push(...roadmapData.resources.company_specific);
+      }
+      if (roadmapData.resources.technical_skills) {
+        allResources.push(...roadmapData.resources.technical_skills);
+      }
+    }
+    
+    // If resources are at the top level
+    if (roadmapData.general_learning) {
+      allResources.push(...roadmapData.general_learning);
+    }
+    if (roadmapData.company_specific) {
+      allResources.push(...roadmapData.company_specific);
+    }
+    if (roadmapData.technical_skills) {
+      allResources.push(...roadmapData.technical_skills);
+    }
+
+    const totalResources = allResources.length;
+    const resourcesPerStep = Math.ceil(totalResources / 4);
+
+    return {
+      totalProgress: { completed: 0, total: totalResources },
+      difficulty: {
+        easy: { completed: 0, total: Math.floor(totalResources * 0.3) },
+        medium: { completed: 0, total: Math.floor(totalResources * 0.5) },
+        hard: { completed: 0, total: Math.floor(totalResources * 0.2) }
+      },
+      steps: [
+        {
+          title: "Step 1: Build Foundation",
+          completed: 0,
+          total: resourcesPerStep,
+          resources: allResources.slice(0, resourcesPerStep)
+        },
+        {
+          title: "Step 2: Strengthen Weak Areas",
+          completed: 0,
+          total: resourcesPerStep,
+          resources: allResources.slice(resourcesPerStep, resourcesPerStep * 2)
+        },
+        {
+          title: "Step 3: Company-Specific Prep",
+          completed: 0,
+          total: resourcesPerStep,
+          resources: allResources.slice(resourcesPerStep * 2, resourcesPerStep * 3)
+        },
+        {
+          title: "Step 4: Tech Stack Deep Dive",
+          completed: 0,
+          total: totalResources - (resourcesPerStep * 3),
+          resources: allResources.slice(resourcesPerStep * 3)
+        }
+      ]
+    };
   };
 
-  const progressPercentage = mockRoadmap.totalProgress.total > 0 
-    ? Math.round((mockRoadmap.totalProgress.completed / mockRoadmap.totalProgress.total) * 100) 
+  const roadmap = buildRoadmapFromData();
+
+  const progressPercentage = roadmap.totalProgress.total > 0 
+    ? Math.round((roadmap.totalProgress.completed / roadmap.totalProgress.total) * 100) 
     : 0;
 
   return (
@@ -151,7 +209,7 @@ export default function Dashboard() {
               <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
                 <p className="text-gray-400 mb-2">Total Progress</p>
                 <p className="text-2xl font-bold mb-3">
-                  {mockRoadmap.totalProgress.completed} / {mockRoadmap.totalProgress.total}
+                  {roadmap.totalProgress.completed} / {roadmap.totalProgress.total}
                 </p>
                 <div className="relative w-full h-4 bg-gray-700 rounded-full">
                   <div 
@@ -161,9 +219,9 @@ export default function Dashboard() {
                 </div>
                 <p className="text-sm text-gray-400 mt-2">{progressPercentage}%</p>
               </div>
-              <ProgressCard label="Easy" completed={mockRoadmap.difficulty.easy.completed} total={0} />
-              <ProgressCard label="Medium" completed={mockRoadmap.difficulty.medium.completed} total={0} />
-              <ProgressCard label="Hard" completed={mockRoadmap.difficulty.hard.completed} total={0} />
+              <ProgressCard label="Easy" completed={roadmap.difficulty.easy.completed} total={roadmap.difficulty.easy.total} />
+              <ProgressCard label="Medium" completed={roadmap.difficulty.medium.completed} total={roadmap.difficulty.medium.total} />
+              <ProgressCard label="Hard" completed={roadmap.difficulty.hard.completed} total={roadmap.difficulty.hard.total} />
             </div>
           </div>
 
@@ -177,15 +235,36 @@ export default function Dashboard() {
             </button>
           </div>
 
+          {/* Debug Info (remove in production) */}
+          {roadmapData && (
+            <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
+              <details>
+                <summary className="cursor-pointer text-sm text-gray-400 hover:text-white">
+                  Debug: API Response Data Structure
+                </summary>
+                <pre className="mt-2 text-xs text-gray-300 overflow-auto max-h-40">
+                  {JSON.stringify(roadmapData, null, 2)}
+                </pre>
+              </details>
+            </div>
+          )}
+
           {/* Roadmap Steps */}
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
               <p className="mt-4 text-gray-400">Loading your roadmap...</p>
             </div>
+          ) : roadmap.steps.length === 0 ? (
+            <div className="text-center py-12">
+              <p className="text-gray-400">No roadmap data available. Please complete the onboarding process.</p>
+              {!roadmapData && (
+                <p className="text-sm text-gray-500 mt-2">No API response received.</p>
+              )}
+            </div>
           ) : (
             <div className="space-y-4">
-              {mockRoadmap.steps.map((step, index) => (
+              {roadmap.steps.map((step, index) => (
                 <div key={index} className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
                   <div 
                     className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-750 transition"
