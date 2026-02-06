@@ -5,6 +5,8 @@ import Landing from './pages/Landing';
 import Dashboard from './pages/Dashboard';
 import Onboarding from './pages/Onboarding';
 import SignInPage from './pages/SignIn';
+import SignUpPage from './pages/SignUp';
+import SDEInterview from './SDEInterview';
 
 function ProtectedRoute({ children }) {
   const { isSignedIn, isLoaded } = useUser();
@@ -94,9 +96,14 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<Landing />} />
-        <Route path="/signin" element={
+        <Route path="/signin/*" element={
           <AuthPageGuard>
             <SignInPage />
+          </AuthPageGuard>
+        } />
+        <Route path="/signup/*" element={
+          <AuthPageGuard>
+            <SignUpPage />
           </AuthPageGuard>
         } />
         <Route path="/signin/sso-callback" element={
@@ -121,6 +128,14 @@ export default function App() {
               <OnboardingOnlyGuard>
                 <Onboarding />
               </OnboardingOnlyGuard>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/mock-interview"
+          element={
+            <ProtectedRoute>
+              <SDEInterview />
             </ProtectedRoute>
           }
         />

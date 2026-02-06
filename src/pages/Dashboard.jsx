@@ -1,12 +1,22 @@
 import { useUser, UserButton, SignedIn } from '@clerk/clerk-react';
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import HeaderOverview from '../components/roadmap/HeaderOverview';
+import TimelineWeek from '../components/roadmap/TimelineWeek';
+import TopicModal from '../components/roadmap/TopicModal';
+import ProgressSidebar from '../components/roadmap/ProgressSidebar';
+import AiMentorButton from '../components/roadmap/AiMentorButton';
+import AiMentorModal from '../components/roadmap/AiMentorModal';
 
 export default function Dashboard() {
   const { user } = useUser();
   const [roadmapData, setRoadmapData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [expandedSections, setExpandedSections] = useState({});
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // per-week expand state handled inside TimelineWeek
+  const [selectedTopic, setSelectedTopic] = useState(null);
+  const [progress, setProgress] = useState({});
+  const [mentorModalOpen, setMentorModalOpen] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     let unsubscribe;
@@ -48,6 +58,8 @@ export default function Dashboard() {
         if (response.ok) {
           const data = await response.json();
           console.log('Dashboard data received:', data);
+          console.log('Resources structure:', data.resources);
+          console.log('Weeks array:', data.weeks);
           setRoadmapData(data);
         } else {
           console.error('Failed to fetch dashboard data:', response.status, response.statusText);
@@ -66,15 +78,10 @@ export default function Dashboard() {
     }
   }, [user]);
 
-  const toggleSection = (index) => {
-    setExpandedSections(prev => ({
-      ...prev,
-      [index]: !prev[index]
-    }));
-  };
+  // per-week collapse handled in TimelineWeek, no section toggler here
 
-  // Build roadmap structure from API data
-  const buildRoadmapFromData = () => {
+  // Build roadmap structure from API data (kept local for clarity)
+  const buildFromData = () => {
     if (!roadmapData) {
       return {
         totalProgress: { completed: 0, total: 0 },
@@ -152,227 +159,148 @@ export default function Dashboard() {
       ]
     };
   };
+  // invoke builder to ensure variables derived are in-sync when roadmapData changes
+  buildFromData();
 
-  const roadmap = buildRoadmapFromData();
+  // Build aggregate info if needed later
 
-  const progressPercentage = roadmap.totalProgress.total > 0 
-    ? Math.round((roadmap.totalProgress.completed / roadmap.totalProgress.total) * 100) 
-    : 0;
+  // legacy aggregate; derived sidebar shows main overallPct instead
+
+  // Build weeks from resources if weeks array doesn't exist in response
+  const buildWeeksFromResources = (data) => {
+    if (!data) return [];
+    
+    // If weeks already exist, use them
+    if (Array.isArray(data.weeks) && data.weeks.length > 0) {
+      return data.weeks;
+    }
+
+    // Otherwise, build weeks from resources
+    const allResources = [];
+    
+    // Collect all resources from different categories
+    if (data.resources) {
+      Object.values(data.resources).forEach(category => {
+        if (Array.isArray(category)) {
+          allResources.push(...category);
+        }
+      });
+    }
+
+    // If no resources, return empty
+    if (allResources.length === 0) {
+      console.warn('No resources found in roadmap data:', data);
+      return [];
+    }
+
+    // Group resources into weeks (6 topics per week)
+    const topicsPerWeek = 6;
+    const weeks = [];
+    
+    for (let i = 0; i < allResources.length; i += topicsPerWeek) {
+      const weekResources = allResources.slice(i, i + topicsPerWeek);
+      weeks.push({
+        week: weeks.length + 1,
+        topics: weekResources.map((resource, idx) => ({
+          id: `${weeks.length + 1}-${idx}`,
+          title: resource.title || resource.url || `Topic ${idx + 1}`,
+          description: resource.description || '',
+          resources: resource.url ? [resource.url] : [],
+          tests: resource.url && (resource.url.includes('leetcode') || resource.url.includes('geeksforgeeks')) ? [resource.url] : [],
+          tags: resource.tags || []
+        }))
+      });
+    }
+
+    return weeks;
+  };
+
+  const weeks = buildWeeksFromResources(roadmapData);
+  console.log('Built weeks:', weeks);
+  const flattenTopics = (weeks || []).flatMap(w => (w.topics || []));
+  const totalTopics = flattenTopics.length;
+  const completedTopics = Object.values(progress).filter(Boolean).length;
+  const overallPct = totalTopics > 0 ? Math.round((completedTopics / totalTopics) * 100) : 0;
+
+  const handleToggleTopic = (topicId) => {
+    setProgress(prev => ({ ...prev, [topicId]: !prev[topicId] }));
+    // TODO: persist to backend (Firestore/Supabase)
+  };
+
+  const handleAskMentor = () => {
+    setMentorModalOpen(true);
+  };
+
+  const handleRegenerate = () => {
+    console.log('Regenerate roadmap requested');
+  };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white flex">
-      {/* Left Sidebar */}
-      <div className={`w-20 bg-gray-800 fixed left-0 top-0 bottom-0 transition-all duration-300 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} z-40 flex flex-col items-center py-6 border-r border-gray-700`}>
-        <div className="mb-8 cursor-pointer" onClick={() => setSidebarOpen(!sidebarOpen)}>
-          <div className="bg-orange-500 w-12 h-12 rounded-lg flex items-center justify-center font-bold text-xl">
-            AG
-          </div>
-        </div>
-        <nav className="flex-1 space-y-4">
-          <NavItem icon="📚" label="Course" />
-          <NavItem icon="📝" label="Blogs" />
-          <NavItem icon="🎤" label="Interview" active />
-          <NavItem icon="📊" label="Dashboard" />
-        </nav>
-        <div className="space-y-4">
-          <button className="text-gray-400 hover:text-white transition">
-            <span className="text-2xl">🌙</span>
+    <div className="min-h-screen bg-gray-900 text-white">
+      <header className="w-full flex items-center justify-between px-6 py-4 border-b border-gray-800">
+        <h1 className="text-2xl font-bold">AlgoGuide</h1>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => navigate('/mock-interview')}
+            className="px-4 py-2 rounded bg-emerald-600 hover:bg-emerald-700 transition"
+          >
+            Start Mock Interview
           </button>
           <SignedIn>
             <UserButton />
           </SignedIn>
         </div>
-      </div>
+      </header>
 
-      {/* Main Content */}
-      <div className="flex-1 flex">
-        <div className="flex-1 p-8 pt-6 overflow-auto">
-          {/* Header */}
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold">Dashboard</h1>
-            <div className="flex gap-3">
-              <button className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700 transition">
-                🔍
-              </button>
-              <select className="bg-gray-800 px-4 py-2 rounded-lg hover:bg-gray-700 transition">
-                <option>Difficulty</option>
-              </select>
-              <button className="bg-orange-500 px-4 py-2 rounded-lg hover:bg-orange-600 transition">
-                &lt;&gt; Pick Random
-              </button>
-            </div>
-          </div>
+      <main className="max-w-6xl mx-auto px-6 py-8 grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-3 space-y-6">
+          <HeaderOverview
+            goal={`Preparing for ${roadmapData?.user_profile?.preferred_role || 'SDE'} (${roadmapData?.user_profile?.target_timeline || 'Plan'})`}
+            weeksTotal={weeks.length || 0}
+            currentWeek={Math.min(weeks.length || 0, 1)}
+            progressPct={overallPct}
+            studyHours={roadmapData?.user_profile?.daily_hours || roadmapData?.user_profile?.study_hours}
+            tip={roadmapData?.mentor_tip}
+            onRegenerate={handleRegenerate}
+          />
 
-          {/* Progress Summary */}
-          <div className="mb-8">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-                <p className="text-gray-400 mb-2">Total Progress</p>
-                <p className="text-2xl font-bold mb-3">
-                  {roadmap.totalProgress.completed} / {roadmap.totalProgress.total}
-                </p>
-                <div className="relative w-full h-4 bg-gray-700 rounded-full">
-                  <div 
-                    className="absolute top-0 left-0 h-4 bg-orange-500 rounded-full transition-all"
-                    style={{ width: `${progressPercentage}%` }}
-                  ></div>
-                </div>
-                <p className="text-sm text-gray-400 mt-2">{progressPercentage}%</p>
-              </div>
-              <ProgressCard label="Easy" completed={roadmap.difficulty.easy.completed} total={roadmap.difficulty.easy.total} />
-              <ProgressCard label="Medium" completed={roadmap.difficulty.medium.completed} total={roadmap.difficulty.medium.total} />
-              <ProgressCard label="Hard" completed={roadmap.difficulty.hard.completed} total={roadmap.difficulty.hard.total} />
-            </div>
-          </div>
-
-          {/* Tabs */}
-          <div className="mb-6 flex gap-1 border-b border-gray-700">
-            <button className="px-4 py-2 border-b-2 border-orange-500 text-orange-500 font-semibold">
-              All Problems
-            </button>
-            <button className="px-4 py-2 text-gray-400 hover:text-white transition">
-              Revision
-            </button>
-          </div>
-
-          {/* Debug Info (remove in production) */}
-          {roadmapData && (
-            <div className="mb-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
-              <details>
-                <summary className="cursor-pointer text-sm text-gray-400 hover:text-white">
-                  Debug: API Response Data Structure
-                </summary>
-                <pre className="mt-2 text-xs text-gray-300 overflow-auto max-h-40">
-                  {JSON.stringify(roadmapData, null, 2)}
-                </pre>
-              </details>
-            </div>
-          )}
-
-          {/* Roadmap Steps */}
           {loading ? (
             <div className="text-center py-12">
               <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
               <p className="mt-4 text-gray-400">Loading your roadmap...</p>
             </div>
-          ) : roadmap.steps.length === 0 ? (
+          ) : weeks.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-gray-400">No roadmap data available. Please complete the onboarding process.</p>
-              {!roadmapData && (
-                <p className="text-sm text-gray-500 mt-2">No API response received.</p>
-              )}
             </div>
           ) : (
             <div className="space-y-4">
-              {roadmap.steps.map((step, index) => (
-                <div key={index} className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-                  <div 
-                    className="p-4 flex items-center justify-between cursor-pointer hover:bg-gray-750 transition"
-                    onClick={() => toggleSection(index)}
-                  >
-                    <div className="flex items-center gap-4 flex-1">
-                      <button className="text-orange-500 font-bold">
-                        {expandedSections[index] ? '▼' : '▶'}
-                      </button>
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-lg">{step.title}</h3>
-                        <div className="flex items-center gap-4 mt-2">
-                          <div className="flex-1 max-w-xs h-2 bg-gray-700 rounded-full">
-                            <div 
-                              className="h-2 bg-orange-500 rounded-full"
-                              style={{ width: `${step.total > 0 ? (step.completed / step.total) * 100 : 0}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-sm text-gray-400">
-                            {step.completed} / {step.total}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {expandedSections[index] && (
-                    <div className="border-t border-gray-700 p-4 space-y-3">
-                      {step.resources.map((resource, idx) => (
-                        <a
-                          key={idx}
-                          href={resource.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="block p-3 bg-gray-700 rounded-lg hover:bg-gray-600 transition"
-                        >
-                          <h4 className="font-medium">{resource.title}</h4>
-                          <p className="text-sm text-gray-400 mt-1">{resource.description}</p>
-                          <div className="flex gap-2 mt-2">
-                            {resource.tags?.map((tag, tagIdx) => (
-                              <span key={tagIdx} className="px-2 py-1 bg-gray-600 rounded text-xs">
-                                {tag}
-                              </span>
-                            ))}
-                          </div>
-                        </a>
-                      ))}
-                    </div>
-                  )}
-                </div>
+              {weeks.map((w, idx) => (
+                <TimelineWeek
+                  key={w.week || idx}
+                  week={w.week || idx + 1}
+                  topics={(w.topics || []).map((t, i) => ({ id: `${w.week || idx + 1}-${i}`, ...t }))}
+                  progressMap={progress}
+                  onToggle={handleToggleTopic}
+                  onOpen={setSelectedTopic}
+                />
               ))}
             </div>
           )}
         </div>
-
-        {/* Right Sidebar */}
-        <div className="hidden lg:block w-80 bg-gray-800 border-l border-gray-700 p-6 overflow-auto">
-          <div className="space-y-4 sticky top-6">
-            <SidebarCard number="01" title="BASICS" icon="🎯" />
-            <SidebarCard number="02" title="DATA STRUCTURES" icon="🎯" />
-            <SidebarCard number="03" title="ALGORITHMS" icon="🎯" />
-            <SidebarCard number="04" title="SYSTEM DESIGN" icon="🎯" />
-            <div className="mt-8">
-              <button className="w-full bg-blue-600 hover:bg-blue-700 py-3 rounded-lg font-semibold transition">
-                Enroll Now to get started
-              </button>
-            </div>
-          </div>
+        <div className="lg:col-span-1">
+          <ProgressSidebar completed={completedTopics} total={totalTopics} upcoming={weeks[0]?.topics || []} />
         </div>
-      </div>
-    </div>
-  );
-}
+      </main>
 
-function NavItem({ icon, label, active = false }) {
-  return (
-    <div className={`text-center group cursor-pointer py-2 px-3 rounded-lg transition ${active ? 'bg-gray-700' : 'hover:bg-gray-700'}`}>
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-xs text-gray-400">{label}</div>
-    </div>
-  );
-}
-
-function ProgressCard({ label, completed, total }) {
-  const percentage = total > 0 ? (completed / total) * 100 : 0;
-  return (
-    <div className="bg-gray-800 rounded-lg p-6 border border-gray-700">
-      <p className="text-gray-400 mb-2">{label}</p>
-      <p className="text-2xl font-bold mb-3">{completed} / {total} completed</p>
-      <div className="relative w-full h-4 bg-gray-700 rounded-full">
-        <div 
-          className="absolute top-0 left-0 h-4 bg-orange-500 rounded-full transition-all"
-          style={{ width: `${percentage}%` }}
-        ></div>
-      </div>
-    </div>
-  );
-}
-
-function SidebarCard({ number, title, icon }) {
-  return (
-    <div className="bg-gray-750 border border-gray-600 rounded-lg p-4 cursor-pointer hover:border-orange-500 transition">
-      <div className="flex items-center gap-3">
-        <span className="text-2xl">{icon}</span>
-        <div>
-          <p className="text-gray-400 text-xs">{number}</p>
-          <p className="font-semibold">{title}</p>
-        </div>
-      </div>
+      <TopicModal open={!!selectedTopic} topic={selectedTopic} onClose={() => setSelectedTopic(null)} onAskMentor={handleAskMentor} />
+      <AiMentorButton onClick={() => setMentorModalOpen(true)} />
+      <AiMentorModal 
+        open={mentorModalOpen} 
+        onClose={() => setMentorModalOpen(false)}
+        userProfile={roadmapData?.user_profile}
+        roadmapData={roadmapData}
+      />
     </div>
   );
 }
