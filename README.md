@@ -1,33 +1,165 @@
-## Algo Guide Landing Page
+# 🚀 AlgoGuide — Personalized Interview Preparation Platform
 
-This repo includes a responsive, accessible hero-style landing page built with React + Tailwind CSS.
+AlgoGuide is an adaptive interview preparation platform designed to replace static problem lists with a personalized, data-driven learning experience. The system analyzes user performance, tracks topic proficiency, and recommends relevant problems and learning resources to accelerate preparation.
 
-### Swap the hero image
-- Place your asset in `public/assets/`.
-- Update the file to `public/assets/hero-algo-guide.png` to match the default prop used by `Hero`. Alternatively, pass a different `heroImageSrc` to `Hero` or change it in `src/pages/Landing.jsx`.
-- A placeholder SVG is provided at `public/assets/hero-algo-guide.svg`.
+> [!IMPORTANT]
+> **Backend Requirement**: This repository contains the **Frontend** code only. The full system architecture includes a Node.js/Express backend and a Python AI service. Ensure these services are running for full functionality.
 
-### Change the CTA target
-- All primary CTAs use the reusable `CTAButton` component and point to `/signin`.
-- If your auth entry route differs, change the `href` prop where `CTAButton` is used (e.g., in `src/components/Hero.jsx`) or update the default prop in `CTAButton`.
+## 📌 Motivation
 
-### Notes
-- There is no top navigation on the landing page by design.
-- Keyboard focus styles and motion-safe animations are enabled. Users who prefer reduced motion will not see entrance animations.
+Traditional interview preparation relies on fixed question sheets that do not adapt to individual strengths, weaknesses, or target roles. AlgoGuide was built to create a smarter preparation workflow that evolves with the learner by using performance analytics and AI-assisted recommendations.
 
-# React + Vite
+## 🏗️ System Architecture
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+```mermaid
+graph TD
+    User((User))
+    Frontend[Frontend (React)]
+    Backend[Backend API (Node.js / Express)]
+    AIService[AI Service (Python + LLM)]
+    DB[(Firebase Database)]
 
-Currently, two official plugins are available:
+    User <--> Frontend
+    Frontend <--> Backend
+    Backend <--> AIService
+    Backend <--> DB
+    AIService -.-> DB
+```
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 🚀 Key Features
 
-## React Compiler
+- **🧠 Personalized Learning Paths**: Tailored paths based on topic proficiency and goals.
+- **📈 Readiness & Progress Scoring**: Dynamic scoring to track your interview readiness.
+- **🎯 Adaptive Problem Recommendations**: AI engine suggests the next best problem to solve.
+- **🤖 AI-Powered Assistance**: 24/7 mentor for doubt resolution and technical guidance.
+- **🗣️ Interactive Mock Interviews**: Real-time voice-based technical interviews.
+- **📊 Performance Tracking Dashboard**: Visual analytics of your preparation journey.
+- **👨‍💻 In-Browser Code Editor**: Integrated environment for practicing solutions.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## 📊 How It Works
 
-## Expanding the ESLint configuration
+1. **User defines preparation goals**: Set your target roles and companies.
+2. **Platform tracks topic-wise performance**: Monitor strengths and weaknesses.
+3. **Recommendation engine suggests next best problems**: Get targeted practice.
+4. **AI assistant provides guided support**: Resolve doubts instantly.
+5. **Readiness score updates dynamically**: See your progress in real-time.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## 🔥 Core Concepts
+
+- **Adaptive Recommendation Systems**: Algorithms that adjust difficulty based on performance.
+- **Backend API Design**: Scalable RESTful architecture using Node.js and Express.
+- **Data-Driven Personalization**: Customizing the experience using user analytics.
+- **AI-Assisted Workflows**: Integrating LLMs for intelligent feedback.
+- **Scalable System Architecture**: Designed for growth and performance.
+
+## ⚙️ Technology Stack
+
+### Frontend
+- **Framework**: [React](https://react.dev/) + [Vite](https://vitejs.dev/)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Authentication**: [Clerk](https://clerk.com/)
+
+### Backend
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: Firebase (Firestore / Authentication)
+
+### AI & Analytics
+- **Integration**: LLM Integration (Python)
+- **Voice AI**: Vapi, Deepgram, 11Labs
+- **Logic**: Performance scoring algorithms
+
+### Tools
+- **Version Control**: Git
+- **Development**: VS Code
+- **Testing**: Postman
+
+## 🧩 Personal Contribution
+
+- **Designed Overall System Architecture**: Created the end-to-end flow from frontend to AI services.
+- **Built Backend APIs**: Developed the Node.js/Express recommendation logic.
+- **Integrated Firebase**: Managed authentication and real-time data storage.
+- **Implemented AI Features**: Built the AI-powered assistance and interview modules.
+
+## 🚧 Future Improvements
+
+- **Microservices Migration**: Moving towards Spring Boot microservices for better scalability.
+- **Advanced ML Engine**: Implementing more sophisticated machine learning models for recommendations.
+- **Enhanced Analytics**: Deeper insights into user performance and coding patterns.
+
+## 📋 Prerequisites
+
+Before you begin, ensure you have the following installed:
+- **Node.js** (v18 or higher)
+- **npm** or **yarn**
+
+## ⚙️ Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/yourusername/AlgoGuide-Frontend.git
+   cd AlgoGuide-Frontend/AlgoGuide
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Configure Environment Variables**
+   Create a `.env` file in the root of `AlgoGuide` directory.
+
+   ```env
+   VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
+   VITE_FIREBASE_API_KEY=your_firebase_key
+   VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=your_project_id
+   VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
+   VITE_FIREBASE_APP_ID=your_app_id
+   VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
+   GEMINI_API_KEY=your_gemini_key
+   ```
+
+## 🏃‍♂️ Running the App
+
+Start the development server:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`.
+
+## 📂 Project Structure
+
+```text
+src/
+├── components/       # Reusable UI components
+│   ├── roadmap/      # Roadmap & Mentor specific components
+│   ├── Hero.jsx      # Landing page hero section
+│   └── ...
+├── pages/            # Main application pages
+│   ├── Dashboard.jsx # User progress & roadmap view
+│   ├── Landing.jsx   # Public landing page
+│   ├── Onboarding.jsx# User setup flow
+│   ├── SignIn.jsx    # Auth pages
+│   └── ...
+├── SDEInterview.jsx  # Core Mock Interview logic (Vapi integration)
+├── App.jsx           # Routing & Auth Guards
+└── main.jsx          # Entry point & Providers
+```
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License.
