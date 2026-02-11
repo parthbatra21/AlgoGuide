@@ -1,0 +1,32 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Theme tokens: soft purple background + purple primary text */
+:root {
+  --bg-gradient-start: #000000; /* force dark mode */
+  --bg-gradient-end: #000000;   /* force dark mode */
+  --text-primary: #f8fafc;      /* brighter light text */
+  --muted: #cbd5e1;             /* lighter muted for contrast */
+  --accent: #22d3ee;            /* cyan accent for glows */
+}
+
+/* App background similar to the provided reference */
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  background: #000;
+  color: var(--text-primary);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Respect reduced motion for our entrance animations */
+@media (prefers-reduced-motion: reduce) {
+  .motion-safe\:animate-fade-in-up,
+  .motion-safe\:animate-fade-in-left {
+    animation: none !important;
+  }
+}
