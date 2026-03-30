@@ -48,7 +48,8 @@ export default function AiMentorModal({ open, onClose, userProfile, roadmapData 
 
       console.log('Sending mentor request:', requestBody);
 
-      const response = await fetch(`/api/ask-mentor`, {
+      const response = await fetch(`http://localhost:8000/ai-mentor/`, {
+
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
@@ -77,7 +78,7 @@ export default function AiMentorModal({ open, onClose, userProfile, roadmapData 
       console.error('Error asking mentor:', error);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        text: `Sorry, I encountered an error: ${error.message}. Please make sure the backend endpoint /ask-mentor is configured and your Gemini API key is set.`,
+        text: `Sorry, I encountered an error: ${error.message}. Please make sure the backend is running at localhost:8000 and your GEMINI_API_KEY is set in .env.`,
         timestamp: new Date()
       }]);
     } finally {
