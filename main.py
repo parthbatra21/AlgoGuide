@@ -10,6 +10,8 @@ import json
 import urllib.parse
 from dotenv import load_dotenv
 from agent import generate_personalized_resources
+from google.api_core import exceptions as gcloud_exceptions
+import requests
 
 # Load environment variables from .env file
 load_dotenv()
@@ -57,6 +59,40 @@ def initialize_firebase():
 # Initialize Firestore
 db = initialize_firebase()
 
+# Helper function to convert Firestore Timestamp and other non-serializable types to JSON-serializable format
+def convert_to_serializable(obj):
+    """
+    Recursively convert Firestore document data to JSON-serializable format
+    Handles Timestamp objects, datetime objects, and other non-serializable types
+    """
+    from datetime import datetime
+    
+    if hasattr(obj, 'timestamp'):  # Firestore Timestamp object
+        return obj.timestamp()
+    elif isinstance(obj, datetime):
+        return obj.isoformat()
+    elif isinstance(obj, dict):
+        return {key: convert_to_serializable(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_to_serializable(item) for item in obj]
+    elif hasattr(obj, '__dict__'):  # Other objects with attributes
+        return str(obj)
+    else:
+        return obj
+
+# Helper function to get timestamp value for sorting
+def get_timestamp_for_sorting(timestamp_value):
+    """
+    Extract a numeric timestamp value for sorting purposes
+    """
+    if timestamp_value is None:
+        return 0.0
+    if hasattr(timestamp_value, 'timestamp'):  # Firestore Timestamp
+        return timestamp_value.timestamp()
+    if isinstance(timestamp_value, (int, float)):
+        return float(timestamp_value)
+    return 0.0
+
 # Create FastAPI instance
 app = FastAPI(
     title="AlgoGuide Backend API",
@@ -97,6 +133,9 @@ class UserAnswers(BaseModel):
 class ResourceGenerationRequest(BaseModel):
     user_id: str
     email: str
+
+class AIMentorRequest(BaseModel):
+    question: str
 
 # Root endpoint
 @app.get("/")
@@ -265,6 +304,8 @@ async def get_user_answers(email: str):
         for doc in answers_ref.stream():
             submission_data = doc.to_dict()
             submission_data['submission_id'] = doc.id
+            # Convert Firestore Timestamps to JSON-serializable format
+            submission_data = convert_to_serializable(submission_data)
             answer_submissions.append(submission_data)
         
         return {
@@ -411,13 +452,17 @@ async def get_user_home_resources(user_id: str):
         
         # Sort by created_at (most recent first)
         try:
-            home_docs_with_data.sort(key=lambda x: x.get('created_at', 0), reverse=True)
-        except:
+            home_docs_with_data.sort(key=lambda x: get_timestamp_for_sorting(x.get('created_at')), reverse=True)
+        except Exception as sort_error:
             # If sorting fails, just return the first document
+            print(f"Warning: Sorting failed: {sort_error}")
             pass
         
+        # Convert Firestore Timestamps to JSON-serializable format
+        latest_doc = convert_to_serializable(home_docs_with_data[0])
+        
         # Return the latest resources
-        return home_docs_with_data[0]
+        return latest_doc
         
     except HTTPException:
         raise
@@ -461,21 +506,129 @@ async def get_user_home_resources_by_email(email: str):
         
         # Sort by created_at (most recent first)
         try:
-            home_docs_with_data.sort(key=lambda x: x.get('created_at', 0), reverse=True)
-        except:
+            home_docs_with_data.sort(key=lambda x: get_timestamp_for_sorting(x.get('created_at')), reverse=True)
+        except Exception as sort_error:
             # If sorting fails, just return the first document
+            print(f"Warning: Sorting failed: {sort_error}")
             pass
         
-        # Return the latest resources
-        home_data = home_docs_with_data[0]
+        # Convert Firestore Timestamps to JSON-serializable format
+        home_data = convert_to_serializable(home_docs_with_data[0])
         home_data['email'] = decoded_email
         
         return home_data
         
     except HTTPException:
         raise
+    except gcloud_exceptions.Forbidden as e:
+        # Common when Firestore API is disabled or blocked by org policy
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Firestore is not available (Forbidden). "
+                "Make sure Cloud Firestore API is enabled for this project and that the service account "
+                "has permission. Original error: "
+                + str(e)
+            ),
+        )
+    except gcloud_exceptions.PermissionDenied as e:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Firestore permission denied. "
+                "Enable Cloud Firestore API and verify service account access. Original error: "
+                + str(e)
+            ),
+        )
+    except gcloud_exceptions.FailedPrecondition as e:
+        # Often thrown when API isn't enabled yet / project not configured
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "Firestore is not ready (FailedPrecondition). "
+                "Enable Cloud Firestore API (and create a Firestore database) then retry. Original error: "
+                + str(e)
+            ),
+        )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error fetching home resources: {str(e)}")
+
+@app.post("/ai-mentor")
+async def ai_mentor_endpoint(request: AIMentorRequest):
+    """
+    AI Mentor endpoint: Accepts a question and returns a Gemini-generated answer.
+    """
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment.")
+    gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + gemini_api_key
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": request.question}]}]
+    }
+    try:
+        response = requests.post(gemini_url, headers=headers, json=payload, timeout=30)
+        if response.status_code == 200:
+            gemini_data = response.json()
+            # Extract the answer from Gemini response
+            answer = gemini_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No answer returned.")
+            return {"answer": answer}
+        else:
+            raise HTTPException(status_code=response.status_code, detail=f"Gemini API error: {response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calling Gemini API: {e}")
+
+@app.get("/ai-mentor")
+async def ai_mentor_get(question: Optional[str] = None):
+    """
+    Convenience GET endpoint to quickly test the AI Mentor.
+    Accepts a query parameter `question` and returns Gemini response.
+    """
+    if not question:
+        return {"detail": "Provide a `question` query parameter or POST JSON {'question': '...'} to /ai-mentor"}
+
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment.")
+    gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + gemini_api_key
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": question}]}]
+    }
+    try:
+        resp = requests.post(gemini_url, headers=headers, json=payload, timeout=30)
+        if resp.status_code == 200:
+            gemini_data = resp.json()
+            answer = gemini_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No answer returned.")
+            return {"answer": answer}
+        else:
+            raise HTTPException(status_code=resp.status_code, detail=f"Gemini API error: {resp.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calling Gemini API: {e}")
+
+@app.post("/ai-mentor/")
+async def ai_mentor_endpoint_slash(request: AIMentorRequest):
+    """
+    Alternate POST endpoint with trailing slash to match frontend requests that include a slash.
+    """
+    gemini_api_key = os.getenv("GEMINI_API_KEY")
+    if not gemini_api_key:
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in environment.")
+    gemini_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=" + gemini_api_key
+    headers = {"Content-Type": "application/json"}
+    payload = {
+        "contents": [{"parts": [{"text": request.question}]}]
+    }
+    try:
+        response = requests.post(gemini_url, headers=headers, json=payload, timeout=30)
+        if response.status_code == 200:
+            gemini_data = response.json()
+            answer = gemini_data.get("candidates", [{}])[0].get("content", {}).get("parts", [{}])[0].get("text", "No answer returned.")
+            return {"answer": answer}
+        else:
+            raise HTTPException(status_code=response.status_code, detail=f"Gemini API error: {response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error calling Gemini API: {e}")
 
 if __name__ == "__main__":
     host = os.getenv("HOST", "0.0.0.0")
