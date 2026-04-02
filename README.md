@@ -131,6 +131,28 @@ npm run dev
 
 The application will be available at `http://localhost:5173`.
 
+## 🐳 Running with Docker
+
+You can also run the application using Docker and Docker Compose. This is recommended for consistent environments.
+
+### 1. Build and Run with Docker Compose
+
+```bash
+# Ensure your .env file is configured correctly
+docker-compose up --build
+```
+
+The application will be available at `http://localhost:3000`.
+
+### 2. Standard Docker Build
+
+If you prefer to build the image manually:
+
+```bash
+docker build -t algoguide-frontend .
+docker run -p 3000:80 algoguide-frontend
+```
+
 ## 📂 Project Structure
 
 ```text
