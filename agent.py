@@ -3,7 +3,7 @@ import json
 import asyncio
 import aiohttp
 from typing import List, Dict, Any
-import google.generativeai as genai
+from google import genai
 from bs4 import BeautifulSoup
 import re
 import urllib.parse
@@ -11,22 +11,30 @@ from datetime import datetime
 import firebase_admin
 from firebase_admin import firestore
 
+def _strip_json_fences(text: str) -> str:
+    """Strip markdown code fences (```json ... ```) from Gemini responses."""
+    text = text.strip()
+    # Remove ```json ... ``` or ``` ... ``` fences
+    text = re.sub(r'^```(?:json)?\s*', '', text)
+    text = re.sub(r'\s*```$', '', text)
+    return text.strip()
+
+
 class GeminiWebAgent:
     def __init__(self, api_key: str = None):
         """
         Initialize the Gemini Web Agent
-        
+
         Args:
             api_key (str): Gemini API key. If not provided, will try to get from environment variable GEMINI_API_KEY
         """
         self.api_key = api_key or os.getenv('GEMINI_API_KEY')
-        self.model = None
+        self.client = None
 
         # Configure Gemini if available. If not, we can still return GeeksforGeeks URLs
         # and use simple fallback metadata.
         if self.api_key:
-            genai.configure(api_key=self.api_key)
-            self.model = genai.GenerativeModel('gemini-1.5-flash')
+            self.client = genai.Client(api_key=self.api_key)
         else:
             print(
                 "Warning: GEMINI_API_KEY not set. "
@@ -157,25 +165,35 @@ class GeminiWebAgent:
         Focus on actionable, specific queries that will yield good learning resources.
         """
         
+        if not self.client:
+            # No API key — return fallback queries directly
+            fallback_queries = []
+            for weak_area in profile['weak_areas']:
+                fallback_queries.append(f"{weak_area} tutorial {profile['primary_language']}")
+                fallback_queries.append(f"{weak_area} interview questions")
+            for company in profile['target_companies']:
+                fallback_queries.append(f"{company} {profile['preferred_role']} interview preparation")
+            for tech in profile['tech_stack']:
+                fallback_queries.append(f"{tech} best practices tutorial")
+            return fallback_queries[:15]
+
         try:
-            response = self.model.generate_content(prompt)
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash", contents=prompt
+            )
             queries = [q.strip() for q in response.text.split('\n') if q.strip()]
             return queries[:15]  # Limit to 15 queries
         except Exception as e:
             print(f"Error generating search queries: {e}")
             # Fallback queries based on profile
             fallback_queries = []
-            
             for weak_area in profile['weak_areas']:
                 fallback_queries.append(f"{weak_area} tutorial {profile['primary_language']}")
                 fallback_queries.append(f"{weak_area} interview questions")
-            
             for company in profile['target_companies']:
                 fallback_queries.append(f"{company} {profile['preferred_role']} interview preparation")
-            
             for tech in profile['tech_stack']:
                 fallback_queries.append(f"{tech} best practices tutorial")
-            
             return fallback_queries[:15]
 
     async def search_and_scrape(self, query: str, max_results: int = 5) -> List[Dict[str, Any]]:
@@ -330,12 +348,15 @@ class GeminiWebAgent:
         Returns:
             Resource metadata dictionary
         """
+        if not self.client:
+            return None
+
         try:
             # Use Gemini to analyze the URL and create metadata
             analysis_prompt = f"""
             Analyze this URL and create metadata for a learning resource: {url}
             Original search query: {query}
-            
+
             Based on the URL structure and domain, provide:
             1. A descriptive title (max 100 chars)
             2. A helpful description (max 300 chars)
@@ -343,8 +364,8 @@ class GeminiWebAgent:
             4. Difficulty level (beginner, intermediate, advanced)
             5. Estimated time to complete (in minutes)
             6. Key topics/tags (comma-separated)
-            
-            Format as JSON:
+
+            Respond with ONLY a valid JSON object (no markdown, no code fences):
             {{
                 "title": "...",
                 "description": "...",
@@ -354,25 +375,26 @@ class GeminiWebAgent:
                 "tags": ["tag1", "tag2", "tag3"]
             }}
             """
-            
-            response = self.model.generate_content(analysis_prompt)
-            
-            # Try to parse JSON response
+
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash", contents=analysis_prompt
+            )
+
+            # Try to parse JSON response (strip markdown fences if present)
             try:
-                import json
-                metadata = json.loads(response.text)
-            except:
+                metadata = json.loads(_strip_json_fences(response.text))
+            except Exception:
                 # Fallback metadata if JSON parsing fails
                 domain = url.split('/')[2] if len(url.split('/')) > 2 else 'unknown'
                 metadata = {
                     "title": f"{query} - {domain}",
                     "description": f"Learning resource about {query} from {domain}",
-                    "resource_type": "unknown",
+                    "resource_type": "blog",
                     "difficulty": "intermediate",
                     "estimated_time": 30,
                     "tags": query.split()
                 }
-            
+
             # Add additional fields
             metadata.update({
                 "url": url,
@@ -380,9 +402,9 @@ class GeminiWebAgent:
                 "created_at": datetime.utcnow().isoformat(),
                 "source": "gemini_web_agent"
             })
-            
+
             return metadata
-            
+
         except Exception as e:
             print(f"Error creating metadata for {url}: {e}")
             return None
@@ -444,20 +466,36 @@ class GeminiWebAgent:
             "general_learning": []
         }
         
+        if not self.client:
+            # No Gemini client — keyword-based fallback categorization
+            for resource in resources:
+                title = resource.get('title', '').lower()
+                if any(weak.lower() in title for weak in profile['weak_areas']):
+                    categories['weak_areas_improvement'].append(resource)
+                elif any(company.lower() in title for company in profile['target_companies']):
+                    categories['interview_preparation'].append(resource)
+                elif 'practice' in title or 'problem' in title:
+                    categories['practice_problems'].append(resource)
+                elif any(tech.lower() in title for tech in profile['tech_stack']):
+                    categories['technology_tutorials'].append(resource)
+                else:
+                    categories['general_learning'].append(resource)
+            return categories
+
         try:
             # Use Gemini to categorize resources
             categorization_prompt = f"""
             Categorize these resources based on the user profile:
-            
+
             User Profile:
             - Weak Areas: {', '.join(profile['weak_areas'])}
             - Target Companies: {', '.join(profile['target_companies'])}
             - Preferred Role: {profile['preferred_role']}
             - Tech Stack: {', '.join(profile['tech_stack'])}
-            
+
             Resources to categorize:
-            {json.dumps([{'title': r['title'], 'description': r['description'], 'tags': r.get('tags', [])} for r in resources], indent=2)}
-            
+            {json.dumps([{'title': r['title'], 'description': r.get('description', ''), 'tags': r.get('tags', [])} for r in resources], indent=2)}
+
             Assign each resource to one of these categories:
             - weak_areas_improvement: Resources that help with user's weak areas
             - interview_preparation: Resources for interview prep, especially for target companies
@@ -465,35 +503,36 @@ class GeminiWebAgent:
             - practice_problems: Coding problems, exercises, challenges
             - technology_tutorials: Tutorials for specific technologies in tech stack
             - general_learning: Other valuable learning resources
-            
-            Return as JSON mapping resource titles to categories:
+
+            Respond with ONLY a valid JSON object (no markdown, no code fences) mapping resource titles to categories:
             {{
                 "Resource Title 1": "category_name",
                 "Resource Title 2": "category_name"
             }}
             """
-            
-            response = self.model.generate_content(categorization_prompt)
-            
+
+            response = self.client.models.generate_content(
+                model="gemini-2.0-flash", contents=categorization_prompt
+            )
+
             try:
-                import json
-                categorization = json.loads(response.text)
-            except:
+                categorization = json.loads(_strip_json_fences(response.text))
+            except Exception:
                 # Fallback: categorize based on keywords
                 categorization = {}
                 for resource in resources:
-                    title = resource['title']
-                    if any(weak in title.lower() for weak in profile['weak_areas']):
-                        categorization[title] = "weak_areas_improvement"
-                    elif any(company.lower() in title.lower() for company in profile['target_companies']):
-                        categorization[title] = "interview_preparation"
-                    elif "practice" in title.lower() or "problem" in title.lower():
-                        categorization[title] = "practice_problems"
-                    elif any(tech.lower() in title.lower() for tech in profile['tech_stack']):
-                        categorization[title] = "technology_tutorials"
+                    title = resource.get('title', '').lower()
+                    if any(weak.lower() in title for weak in profile['weak_areas']):
+                        categorization[resource['title']] = "weak_areas_improvement"
+                    elif any(company.lower() in title for company in profile['target_companies']):
+                        categorization[resource['title']] = "interview_preparation"
+                    elif 'practice' in title or 'problem' in title:
+                        categorization[resource['title']] = "practice_problems"
+                    elif any(tech.lower() in title for tech in profile['tech_stack']):
+                        categorization[resource['title']] = "technology_tutorials"
                     else:
-                        categorization[title] = "general_learning"
-            
+                        categorization[resource['title']] = "general_learning"
+
             # Assign resources to categories
             for resource in resources:
                 category = categorization.get(resource['title'], 'general_learning')
@@ -501,7 +540,7 @@ class GeminiWebAgent:
                     categories[category].append(resource)
                 else:
                     categories['general_learning'].append(resource)
-                    
+
         except Exception as e:
             print(f"Error categorizing resources: {e}")
             # Fallback: put all resources in general_learning
