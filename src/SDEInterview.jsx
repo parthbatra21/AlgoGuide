@@ -52,6 +52,7 @@ vector<int> twoSum(vector<int>& nums, int target) {
   const vapiRef = useRef(null);
   const timerRef = useRef(null);
   const transcriptEndRef = useRef(null);
+  const transcriptContainerRef = useRef(null);
 
   // Initialize Vapi with your PUBLIC key
   useEffect(() => {
@@ -124,9 +125,12 @@ vector<int> twoSum(vector<int>& nums, int target) {
     };
   }, [isCallActive]);
 
-  // Auto-scroll transcript
+  // Auto-scroll transcript when new entries arrive (only scroll the transcript container)
   useEffect(() => {
-    transcriptEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = transcriptContainerRef.current;
+    if (!container) return;
+    // Smoothly scroll the container to the bottom when transcript updates
+    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
   }, [transcript]);
 
   const formatTime = (seconds) => {
@@ -335,8 +339,8 @@ Start by greeting them warmly and asking them to introduce themselves!`
               padding: '20px',
               height: '450px',
               overflowY: 'auto',
-              marginBottom: '20px'
-            }}>
+              // attach ref to the scrollable transcript container
+            }} ref={transcriptContainerRef}>
               {transcript.length === 0 ? (
                 <div style={{
                   display: 'flex',
