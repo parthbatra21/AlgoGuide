@@ -1,80 +1,98 @@
-# 🚀 AlgoGuide — Personalized Interview Preparation Platform
+# 🚀 AlgoGuide — AI-Powered Personalized Interview Preparation Platform
 
-AlgoGuide is an adaptive interview preparation platform designed to replace static problem lists with a personalized, data-driven learning experience. The system analyzes user performance, tracks topic proficiency, and recommends relevant problems and learning resources to accelerate preparation.
-
-> [!IMPORTANT]
-> **Backend Requirement**: This repository contains the **Frontend** code only. The full system architecture includes a Node.js/Express backend and a Python AI service. Ensure these services are running for full functionality.
+AlgoGuide is an AI-powered interview preparation platform that replaces static problem sheets with a personalized learning experience. The platform analyzes a learner's profile, identifies weak areas, generates tailored learning resources, and provides AI mentorship to accelerate interview preparation.
 
 ---
 
 ## 📌 Motivation
 
-Traditional interview preparation relies on fixed question sheets that do not adapt to individual strengths, weaknesses, or target roles. AlgoGuide creates a smarter workflow that evolves with the learner using performance analytics and AI-driven recommendations.
+Most interview preparation platforms provide the same roadmap to every learner. In reality, every student has different strengths, weaknesses, goals, and timelines.
+
+AlgoGuide creates personalized learning pathways by combining:
+
+- User profiling
+- AI-generated learning recommendations
+- Automated resource discovery
+- Progress tracking
+- Interactive AI mentorship
+
+The goal is to help students focus on the right topics at the right time.
 
 ---
 
 ## 🏗️ System Architecture
 
-```mermaid
-graph TD
-    User([User])
-
-    subgraph Frontend
-        FrontendApp[React App]
-    end
-
-    subgraph Backend
-        API[Express API]
-        Auth[Auth Service]
-    end
-
-    subgraph AI_Layer
-        AI[LLM Service - Python]
-    end
-
-    subgraph Database
-        DB[(Firebase)]
-    end
-
-    User --> FrontendApp
-    FrontendApp --> API
-    API --> Auth
-    API --> DB
-    API --> AI
-    AI --> DB
-```
+mermaid graph TD     User([User])      subgraph Frontend         ReactApp[React + Vite]     end      subgraph Backend         FastAPI[FastAPI Server]         ResourceEngine[Recommendation Engine]         Mentor[AI Mentor]     end      subgraph AI Layer         Gemini[Google Gemini]     end      subgraph Database         Firestore[(Firebase Firestore)]     end      User --> ReactApp     ReactApp --> FastAPI     FastAPI --> Firestore     FastAPI --> ResourceEngine     ResourceEngine --> Gemini     ResourceEngine --> Firestore     Mentor --> Gemini 
 
 ---
 
 ## 🚀 Key Features
 
-* 🧠 **Personalized Learning Paths** — Tailored based on user performance
-* 📈 **Readiness & Progress Scoring** — Dynamic tracking of preparation
-* 🎯 **Adaptive Problem Recommendations** — Smart next-question suggestions
-* 🤖 **AI-Powered Assistance** — 24/7 doubt-solving mentor
-* 🗣️ **Mock Interviews** — Real-time voice-based interviews
-* 📊 **Analytics Dashboard** — Visual performance tracking
-* 👨‍💻 **Code Editor** — Practice directly in browser
+### 🧠 Personalized Learning Paths
+
+Generates customized learning resources based on:
+
+- Current skill level
+- Weak areas
+- Target companies
+- Preferred role
+- Technology stack
+
+### 🔍 AI-Powered Resource Discovery
+
+Automatically:
+
+- Generates learning queries
+- Searches relevant resources
+- Categorizes content
+- Builds a structured roadmap
+
+### 🤖 AI Mentor
+
+Users can interact with an AI mentor powered by Google Gemini to:
+
+- Ask interview questions
+- Clarify concepts
+- Get preparation guidance
+
+### 📚 Smart Resource Categorization
+
+Resources are automatically grouped into:
+
+- Weak Area Improvement
+- Interview Preparation
+- Skill Development
+- Practice Problems
+- Technology Tutorials
+- General Learning
+
+### 🔥 Dynamic Recommendation Engine
+
+The platform adapts recommendations using user questionnaire responses rather than fixed roadmaps.
 
 ---
 
 ## 📊 How It Works
 
-1. User defines preparation goals
-2. Platform tracks topic-wise performance
-3. Recommendation engine suggests next problems
-4. AI assistant provides guidance
-5. Readiness score updates dynamically
+1. User completes onboarding questionnaire
+2. User profile is generated
+3. Gemini creates personalized search queries
+4. Learning resources are discovered automatically
+5. Resources are enriched and categorized
+6. Personalized roadmap is stored in Firestore
+7. AI mentor assists throughout preparation
 
 ---
 
 ## 🔥 Core Concepts
 
-* Adaptive Recommendation Systems
-* Scalable Backend API Design
-* Data-Driven Personalization
-* AI-Assisted Workflows
-* System Design Architecture
+- Recommendation Systems
+- Retrieval-Augmented Learning
+- AI-Powered Personalization
+- FastAPI Backend Architecture
+- Firestore Data Modeling
+- Async Programming
+- LLM Integration
 
 ---
 
@@ -82,150 +100,163 @@ graph TD
 
 ### Frontend
 
-* React + Vite
-* Tailwind CSS
-* Clerk Authentication
+- React
+- Vite
+- Tailwind CSS
+- Clerk Authentication
 
 ### Backend
 
-* Node.js
-* Express.js
-* Firebase (Firestore + Auth)
+- Python
+- FastAPI
+- Firebase Firestore
+- Firebase Admin SDK
+- aiohttp
+- BeautifulSoup
 
-### AI & Analytics
+### AI Layer
 
-* Python (LLM Integration)
-* Voice AI: Vapi, Deepgram, ElevenLabs
-* Performance Scoring Algorithms
+- Google Gemini API
+- Prompt Engineering
+- Resource Classification
+
+### Database
+
+- Firebase Firestore
 
 ### Tools
 
-* Git
-* VS Code
-* Postman
+- Git
+- VS Code
+- Postman
 
 ---
 
-## 🧩 Personal Contribution
+## 🧩 Backend Workflow
 
-* Designed full system architecture
-* Built backend APIs (Node.js/Express)
-* Integrated Firebase authentication and database
-* Implemented AI-powered interview and recommendation system
+text User Answers       ↓ Profile Parser       ↓ Query Generator (Gemini)       ↓ Resource Search       ↓ Metadata Enrichment       ↓ Resource Categorization       ↓ Firestore       ↓ Personalized Learning Dashboard 
 
 ---
 
-## 🚧 Future Improvements
+## 📂 Firestore Structure
 
-* Microservices architecture (Spring Boot)
-* Advanced ML-based recommendation engine
-* Enhanced analytics and insights
-
----
-
-## 📋 Prerequisites
-
-Make sure you have:
-
-* Node.js (v18+)
-* npm or yarn
-
----
-
-## ⚙️ Installation
-
-### 1. Clone Repository
-
-```bash
-git clone https://github.com/yourusername/AlgoGuide-Frontend.git
-cd AlgoGuide-Frontend/AlgoGuide
-```
-
-### 2. Install Dependencies
-
-```bash
-npm install
-```
-
-### 3. Setup Environment Variables
-
-Create a `.env` file:
-
-```env
-VITE_CLERK_PUBLISHABLE_KEY=your_clerk_key
-VITE_FIREBASE_API_KEY=your_firebase_key
-VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
-VITE_FIREBASE_PROJECT_ID=your_project_id
-VITE_FIREBASE_STORAGE_BUCKET=your_project.appspot.com
-VITE_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
-VITE_FIREBASE_APP_ID=your_app_id
-VITE_FIREBASE_MEASUREMENT_ID=your_measurement_id
-GEMINI_API_KEY=your_gemini_key
-```
-
----
-
-## 🏃‍♂️ Running the App
-
-```bash
-npm run dev
-```
-
-App runs at:
-
-```
-http://localhost:5173
-```
+text users │ ├── user_id │   ├── name │   ├── email │   └── ... │ │   ├── question_answers │   │     └── submission_docs │   │ │   └── home │         └── generated_resources │ jobs │ └── generation_job_docs 
 
 ---
 
 ## 📂 Project Structure
 
-```
-src/
-├── components/
-│   ├── roadmap/
-│   ├── Hero.jsx
-│   └── ...
-├── pages/
-│   ├── Dashboard.jsx
-│   ├── Landing.jsx
-│   ├── Onboarding.jsx
-│   ├── SignIn.jsx
-│   └── ...
-├── SDEInterview.jsx
-├── App.jsx
-└── main.jsx
-```
+text AlgoGuide │ ├── frontend/ │   ├── src/ │   ├── components/ │   ├── pages/ │   └── App.jsx │ ├── backend/ │   ├── main.py │   ├── agent.py │   ├── db.py │   ├── models.py │   └── requirements.txt │ └── README.md 
 
 ---
 
-## 🤝 Contributing
+## 📋 Prerequisites
 
-1. Fork the repo
-2. Create a branch
+- Python 3.11+
+- Node.js 18+
+- Firebase Project
+- Gemini API Key
 
-   ```bash
-   git checkout -b feature/your-feature
-   ```
-3. Commit changes
-4. Push to GitHub
-5. Create Pull Request
+---
+
+## ⚙️ Frontend Setup
+
+bash cd frontend npm install npm run dev 
+
+Frontend runs on:
+
+text http://localhost:5173 
+
+---
+
+## ⚙️ Backend Setup
+
+Install dependencies:
+
+bash pip install -r requirements.txt 
+
+Create a .env file:
+
+env GEMINI_API_KEY=your_gemini_key GOOGLE_APPLICATION_CREDENTIALS=firebase-key.json FIREBASE_PROJECT_ID=your_project_id 
+
+Start FastAPI server:
+
+bash python main.py 
+
+or
+
+bash uvicorn main:app --reload 
+
+Backend runs on:
+
+text http://localhost:8000 
+
+---
+
+## 📡 API Endpoints
+
+### Users
+
+http POST /users GET /users GET /users/{user_id} PUT /users/{user_id} DELETE /users/{user_id} 
+
+### Questionnaire
+
+http POST /users/{email}/answers GET /users/{email}/answers 
+
+### Personalized Resources
+
+http POST /home/{email}/generate GET /home/{email} 
+
+### Jobs
+
+http GET /jobs/{job_id} 
+
+### AI Mentor
+
+http POST /mentor 
+
+---
+
+## 🧩 Personal Contribution
+
+- Designed complete system architecture
+- Built FastAPI backend
+- Designed Firestore schema
+- Developed AI-powered recommendation engine
+- Implemented Gemini integration
+- Built resource categorization pipeline
+- Created AI mentor service
+- Developed React frontend
+- Integrated Clerk authentication
+
+---
+
+## 🚧 Future Improvements
+
+- ML-based recommendation ranking
+- LeetCode integration
+- User progress tracking
+- Personalized revision scheduling
+- Spring Boot microservices architecture
+- Vector database integration (RAG)
 
 ---
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+MIT License
 
 ---
 
 ## ⭐ Final Note
 
-AlgoGuide is not just a project — it's a **complete system design + AI application** showcasing:
+AlgoGuide demonstrates:
 
-* Full-stack engineering
-* AI integration
-* Scalable architecture
+- Full Stack Development
+- FastAPI Backend Engineering
+- Firebase Integration
+- Generative AI Applications
+- Recommendation Systems
+- Asynchronous Python Programming
 
-Perfect for **placements, internships, and portfolio** 🚀
+A complete AI-powered learning platform built for interview preparation and career grow
