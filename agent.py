@@ -6,12 +6,13 @@ import re
 import urllib.parse
 from datetime import datetime
 from functools import lru_cache
-from typing import Any
+from typing import Any, TypedDict
 
 import aiohttp
 from bs4 import BeautifulSoup
 from firebase_admin import firestore
 from google import genai
+from langgraph.graph import END, START, StateGraph
 
 from db import save_home_resources
 
@@ -371,12 +372,44 @@ _enricher = MetadataEnricher()
 _categoriser = ResourceCategoriser()
 
 
-class ResourcePipeline:
-    async def run(self, user_answers: list[dict[str, Any]]) -> dict[str, Any]:
-        profile = _parser.parse(user_answers)
-        queries = await asyncio.to_thread(_query_gen.generate, profile)
+class AlgoGuideState(TypedDict):
+    user_answers: list[dict]
+    profile: dict
+    search_queries: list[str]
+    raw_resources: list[dict]
+    enriched_resources: list[dict]
+    categorized_resources: dict
+    roadmap: dict
+    error: str | None
 
-        all_resources: list[dict[str, Any]] = []
+
+async def parse_profile_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        profile = _parser.parse(state["user_answers"])
+        return {"profile": profile}
+    except Exception as e:
+        logger.exception("Error in parse_profile_node")
+        return {"error": str(e)}
+
+
+async def generate_queries_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        queries = await asyncio.to_thread(_query_gen.generate, state["profile"])
+        return {"search_queries": queries}
+    except Exception as e:
+        logger.exception("Error in generate_queries_node")
+        return {"error": str(e)}
+
+
+async def scrape_resources_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        raw_resources = []
         timeout = aiohttp.ClientTimeout(total=12)
         headers = {
             "User-Agent": (
@@ -385,34 +418,136 @@ class ResourcePipeline:
                 "Chrome/120.0.0.0 Safari/537.36"
             )
         }
-
         async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
             scraper = GFGScraper(session)
-
-            for query in queries:
+            for query in state["search_queries"]:
                 logger.info("Searching for: %s", query)
                 urls = await scraper.search(query, max_results=3)
-                resources: list[dict[str, Any]] = []
-
                 for url in urls:
-                    resource = await asyncio.to_thread(_enricher.enrich, url, query)
-                    resources.append(resource or scraper.basic_resource(url, query))
-
-                if not resources:
-                    resources.append(scraper.search_fallback_resource(query))
-
-                all_resources.extend(resources)
+                    raw_resources.append({"query": query, "url": url})
+                if not urls:
+                    raw_resources.append({
+                        "query": query,
+                        "url": scraper._gfg_search_url(query),
+                        "is_fallback": True
+                    })
                 await asyncio.sleep(0.1)
+        return {"raw_resources": raw_resources}
+    except Exception as e:
+        logger.exception("Error in scrape_resources_node")
+        return {"error": str(e)}
 
-        categorised = await asyncio.to_thread(_categoriser.categorise, all_resources, profile)
 
-        return {
-            "user_profile": profile,
-            "search_queries": queries,
-            "total_resources": len(all_resources),
-            "resources": categorised,
+async def enrich_resources_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        enriched_resources = []
+        for raw in state["raw_resources"]:
+            query = raw["query"]
+            url = raw["url"]
+            if raw.get("is_fallback"):
+                res = {
+                    "title": f"GeeksforGeeks search: {query}",
+                    "url": url,
+                    "description": f"GeeksforGeeks search results for {query}",
+                    "resource_type": "search",
+                    "difficulty": "beginner",
+                    "tags": query.split(),
+                    "created_at": datetime.utcnow().isoformat(),
+                    "query": query,
+                    "source": "geeksforgeeks_search_fallback",
+                }
+                enriched_resources.append(res)
+            else:
+                enriched = await asyncio.to_thread(_enricher.enrich, url, query)
+                if enriched:
+                    enriched_resources.append(enriched)
+                else:
+                    res = {
+                        "title": f"GeeksforGeeks: {query}",
+                        "url": url,
+                        "description": f"GeeksforGeeks article explaining {query}",
+                        "resource_type": "blog",
+                        "difficulty": "beginner",
+                        "estimated_time": 20,
+                        "tags": query.split(),
+                        "created_at": datetime.utcnow().isoformat(),
+                        "query": query,
+                        "source": "geeksforgeeks",
+                    }
+                    enriched_resources.append(res)
+        return {"enriched_resources": enriched_resources}
+    except Exception as e:
+        logger.exception("Error in enrich_resources_node")
+        return {"error": str(e)}
+
+
+async def categorise_resources_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        categorised = await asyncio.to_thread(
+            _categoriser.categorise, state["enriched_resources"], state["profile"]
+        )
+        return {"categorized_resources": categorised}
+    except Exception as e:
+        logger.exception("Error in categorise_resources_node")
+        return {"error": str(e)}
+
+
+async def build_roadmap_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        roadmap = {
+            "user_profile": state["profile"],
+            "search_queries": state["search_queries"],
+            "total_resources": len(state["enriched_resources"]),
+            "resources": state["categorized_resources"],
             "generated_at": datetime.utcnow().isoformat(),
         }
+        return {"roadmap": roadmap}
+    except Exception as e:
+        logger.exception("Error in build_roadmap_node")
+        return {"error": str(e)}
+
+
+workflow = StateGraph(AlgoGuideState)
+workflow.add_node("parse_profile", parse_profile_node)
+workflow.add_node("generate_queries", generate_queries_node)
+workflow.add_node("scrape_resources", scrape_resources_node)
+workflow.add_node("enrich_resources", enrich_resources_node)
+workflow.add_node("categorise_resources", categorise_resources_node)
+workflow.add_node("build_roadmap", build_roadmap_node)
+
+workflow.add_edge(START, "parse_profile")
+workflow.add_edge("parse_profile", "generate_queries")
+workflow.add_edge("generate_queries", "scrape_resources")
+workflow.add_edge("scrape_resources", "enrich_resources")
+workflow.add_edge("enrich_resources", "categorise_resources")
+workflow.add_edge("categorise_resources", "build_roadmap")
+workflow.add_edge("build_roadmap", END)
+
+compiled_graph = workflow.compile()
+
+
+class ResourcePipeline:
+    async def run(self, user_answers: list[dict[str, Any]]) -> dict[str, Any]:
+        initial_state = {
+            "user_answers": user_answers,
+            "profile": {},
+            "search_queries": [],
+            "raw_resources": [],
+            "enriched_resources": [],
+            "categorized_resources": {},
+            "roadmap": {},
+            "error": None,
+        }
+        result = await compiled_graph.ainvoke(initial_state)
+        if result.get("error"):
+            raise Exception(result["error"])
+        return result["roadmap"]
 
 
 async def generate_personalized_resources(
