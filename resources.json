@@ -1,0 +1,322 @@
+[
+  {
+    "id": "neetcode-practice",
+    "title": "NeetCode 150 Practice Roadmap",
+    "url": "https://neetcode.io/practice",
+    "description": "A curated list of the 150 most popular coding interview questions covering all major data structures and algorithm categories.",
+    "tags": ["dsa", "practice", "roadmap", "leetcode"],
+    "difficulty": "Medium",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-arrays-hashing",
+    "title": "Arrays & Hashing Course - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/0",
+    "description": "Comprehensive guide to static and dynamic arrays, hash maps, hash sets, and their search/insert complexities.",
+    "tags": ["arrays", "hashing", "dsa", "hashmap", "hashset"],
+    "difficulty": "Easy",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-two-pointers",
+    "title": "Two Pointer Technique - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/3",
+    "description": "Learn the two-pointer technique for optimized search in sorted arrays and linear data structures.",
+    "tags": ["two-pointers", "arrays", "dsa", "sorting"],
+    "difficulty": "Easy",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-sliding-window",
+    "title": "Sliding Window Pattern - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/4",
+    "description": "Master the sliding window algorithm to solve contiguous subarray and substring problems efficiently.",
+    "tags": ["sliding-window", "arrays", "strings", "dsa"],
+    "difficulty": "Medium",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-linked-lists",
+    "title": "Linked Lists & Pointers - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/5",
+    "description": "Tutorial on singly, doubly, and circular linked lists, including reversal, cycle detection, and merging lists.",
+    "tags": ["linked-lists", "pointers", "dsa"],
+    "difficulty": "Medium",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-binary-search",
+    "title": "Binary Search Mastery - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/1",
+    "description": "Understanding the divide-and-conquer binary search algorithm on sorted intervals and custom search spaces.",
+    "tags": ["binary-search", "algorithms", "dsa", "divide-and-conquer"],
+    "difficulty": "Easy",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-trees",
+    "title": "Binary Trees & BST - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/7",
+    "description": "Detailed explanation of binary trees, binary search trees (BST), preorder, inorder, postorder, and level-order traversal algorithms.",
+    "tags": ["trees", "bst", "traversals", "recursion", "dsa"],
+    "difficulty": "Medium",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-tries",
+    "title": "Tries / Prefix Trees - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/8",
+    "description": "Learn trie nodes and character mapping for optimized prefix searches, auto-completion systems, and dictionary storage.",
+    "tags": ["tries", "trees", "strings", "dsa"],
+    "difficulty": "Hard",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-graphs",
+    "title": "Graphs BFS, DFS & Dijkstra - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/11",
+    "description": "Study graph representations (adjacency lists, matrices), Breadth-First Search, Depth-First Search, topological sort, and Dijkstra's shortest path.",
+    "tags": ["graphs", "bfs", "dfs", "dijkstra", "shortest-path", "dsa"],
+    "difficulty": "Hard",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "neetcode-dp",
+    "title": "Introduction to Dynamic Programming - Neetcode",
+    "url": "https://neetcode.io/courses/dsa-for-beginners/12",
+    "description": "Demystifying 1D and 2D Dynamic Programming using memoization (top-down) and tabulation (bottom-up) approaches.",
+    "tags": ["dynamic-programming", "memoization", "tabulation", "dsa"],
+    "difficulty": "Hard",
+    "source": "Neetcode",
+    "language": "General"
+  },
+  {
+    "id": "gfg-dp",
+    "title": "Dynamic Programming Tutorial - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/dynamic-programming/",
+    "description": "Learn dynamic programming concepts, optimal substructure, overlapping subproblems, memoization, and tabulation with classic DP problems.",
+    "tags": ["dynamic-programming", "memoization", "tabulation", "dsa", "algorithms"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-graphs",
+    "title": "Graph Data Structure and Algorithms - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/graph-data-structure-and-algorithms/",
+    "description": "Complete guide to graph representations, Breadth First Search (BFS), Depth First Search (DFS), Dijkstra shortest path, Prim's and Kruskal's MST algorithms.",
+    "tags": ["graphs", "bfs", "dfs", "dijkstra", "dsa", "algorithms"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "roadmap-algorithms",
+    "title": "Algorithms Roadmap - Roadmap.sh",
+    "url": "https://roadmap.sh/computer-science",
+    "description": "Visualize standard coding algorithms, dynamic programming, sorting, searching, greedy approaches, and time complexity models.",
+    "tags": ["algorithms", "dynamic-programming", "roadmap", "dsa", "time-complexity"],
+    "difficulty": "Medium",
+    "source": "Roadmap.sh",
+    "language": "General"
+  },
+  {
+    "id": "roadmap-cs",
+    "title": "Computer Science Roadmap - Roadmap.sh",
+    "url": "https://roadmap.sh/computer-science",
+    "description": "A comprehensive guide mapping out standard computer science topics, operating system concepts, data structures, and networks.",
+    "tags": ["computer-science", "roadmap", "os", "networking"],
+    "difficulty": "Medium",
+    "source": "Roadmap.sh",
+    "language": "General"
+  },
+  {
+    "id": "roadmap-system-design",
+    "title": "System Design & Architecture - Roadmap.sh",
+    "url": "https://roadmap.sh/system-design",
+    "description": "Learn scalable web architectures, load balancers, caching strategies, database replication, sharding, CDN, and microservices.",
+    "tags": ["system-design", "architecture", "microservices", "scaling", "load-balancer"],
+    "difficulty": "Hard",
+    "source": "Roadmap.sh",
+    "language": "General"
+  },
+  {
+    "id": "roadmap-design-patterns",
+    "title": "Software Design Patterns - Roadmap.sh",
+    "url": "https://roadmap.sh/design-patterns",
+    "description": "Overview of creational, structural, and behavioral design patterns including Singleton, Factory, Observer, and Strategy.",
+    "tags": ["design-patterns", "oop", "architecture", "solid-principles"],
+    "difficulty": "Medium",
+    "source": "Roadmap.sh",
+    "language": "General"
+  },
+  {
+    "id": "roadmap-backend",
+    "title": "Backend Developer Roadmap - Roadmap.sh",
+    "url": "https://roadmap.sh/backend",
+    "description": "A step-by-step visual roadmap for learning backend development, APIs, servers, databases, caching, and security.",
+    "tags": ["backend", "roadmap", "apis", "databases", "caching"],
+    "difficulty": "Medium",
+    "source": "Roadmap.sh",
+    "language": "General"
+  },
+  {
+    "id": "javadocs-collections",
+    "title": "Java Collections Framework Guide - Oracle Docs",
+    "url": "https://docs.oracle.com/javase/8/docs/technotes/guides/collections/overview.html",
+    "description": "Official documentation explaining core Java Collection interfaces (List, Set, Map, Queue) and implementations (ArrayList, HashSet, HashMap).",
+    "tags": ["java", "collections", "hashing", "arraylist", "hashmap"],
+    "difficulty": "Medium",
+    "source": "Java Docs",
+    "language": "Java"
+  },
+  {
+    "id": "javadocs-concurrency",
+    "title": "Java Concurrency & Multithreading Docs",
+    "url": "https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/package-summary.html",
+    "description": "Java concurrency utilities (java.util.concurrent) including ExecutorService, thread pools, locks, semaphores, and concurrent maps.",
+    "tags": ["java", "concurrency", "multithreading", "thread-pool", "synchronization"],
+    "difficulty": "Hard",
+    "source": "Java Docs",
+    "language": "Java"
+  },
+  {
+    "id": "javadocs-streams",
+    "title": "Java Streams API Reference & Tutorial",
+    "url": "https://docs.oracle.com/javase/8/docs/api/java/util/stream/package-summary.html",
+    "description": "Guide to functional operations on streams of elements, map-reduce transformations, filters, and parallel processing streams.",
+    "tags": ["java", "streams", "functional-programming", "lambda"],
+    "difficulty": "Medium",
+    "source": "Java Docs",
+    "language": "Java"
+  },
+  {
+    "id": "python-collections",
+    "title": "Python Collections Module Reference",
+    "url": "https://docs.python.org/3/library/collections.html",
+    "description": "Official reference guide for Python's specialized container datatypes (Counter, deque, OrderedDict, defaultdict, namedtuple).",
+    "tags": ["python", "collections", "deque", "defaultdict", "containers"],
+    "difficulty": "Medium",
+    "source": "Python Docs",
+    "language": "Python"
+  },
+  {
+    "id": "python-concurrency",
+    "title": "Python Concurrency and Asyncio Reference",
+    "url": "https://docs.python.org/3/library/asyncio.html",
+    "description": "Documentation for writing concurrent code using the async/await syntax, event loops, tasks, coroutines, and thread executors.",
+    "tags": ["python", "asyncio", "concurrency", "async", "multithreading"],
+    "difficulty": "Hard",
+    "source": "Python Docs",
+    "language": "Python"
+  },
+  {
+    "id": "cpp-stl-vector",
+    "title": "C++ STL Vectors and Containers Reference",
+    "url": "https://en.cppreference.com/w/cpp/container",
+    "description": "C++ Standard Template Library container class templates including vector, list, deque, map, set, unordered_map, and unordered_set.",
+    "tags": ["cpp", "stl", "containers", "vector", "unordered_map"],
+    "difficulty": "Medium",
+    "source": "C++ Docs",
+    "language": "C++"
+  },
+  {
+    "id": "cpp-threads",
+    "title": "C++ Concurrency and Thread Support Library",
+    "url": "https://en.cppreference.com/w/cpp/thread",
+    "description": "C++ standard library support for threads, mutual exclusion (mutex), condition variables, futures, and lock utilities.",
+    "tags": ["cpp", "concurrency", "threads", "mutex", "multithreading"],
+    "difficulty": "Hard",
+    "source": "C++ Docs",
+    "language": "C++"
+  },
+  {
+    "id": "js-arrays-objects",
+    "title": "JavaScript Standard Objects & Array Reference",
+    "url": "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array",
+    "description": "MDN JavaScript Array, Set, Map, WeakMap, and typed array global objects standard documentation and methods.",
+    "tags": ["javascript", "arrays", "map", "set", "mdn"],
+    "difficulty": "Medium",
+    "source": "JS Docs",
+    "language": "JavaScript"
+  },
+  {
+    "id": "js-async-promises",
+    "title": "JavaScript Asynchronous Programming MDN",
+    "url": "https://developer.mozilla.org/en-US/docs/Learn/JavaScript/Asynchronous",
+    "description": "MDN guide to event loop, callbacks, promises, async/await keywords, and handling network API requests concurrently.",
+    "tags": ["javascript", "async", "promises", "async-await", "event-loop"],
+    "difficulty": "Hard",
+    "source": "JS Docs",
+    "language": "JavaScript"
+  },
+  {
+    "id": "gfg-dbms",
+    "title": "Database Management Systems (DBMS) - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/dbms/",
+    "description": "Comprehensive DBMS tutorial covering SQL queries, normalization (1NF, 2NF, 3NF, BCNF), ACID properties, transactions, indexing, and relational algebra.",
+    "tags": ["dbms", "sql", "transactions", "acid", "normalization"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-os",
+    "title": "Operating Systems (OS) Concepts - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/operating-systems/",
+    "description": "OS tutorial explaining process management, CPU scheduling, deadlocks, memory management, virtual memory, paging, and file systems.",
+    "tags": ["os", "process-scheduling", "memory-management", "deadlock", "paging"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-cn",
+    "title": "Computer Networks (CN) Guide - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/computer-network-tutorials/",
+    "description": "Detailed notes on OSI model, TCP/IP stack, IP routing, subnetting, HTTP/HTTPS protocols, DNS, routing algorithms, and socket programming.",
+    "tags": ["computer-networks", "protocols", "tcp-ip", "routing", "subnetting"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-sorting",
+    "title": "Sorting & Searching Algorithms - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/sorting-algorithms/",
+    "description": "Guide to Quick Sort, Merge Sort, Heap Sort, Bubble Sort, Binary Search, and their time and space complexity analyses.",
+    "tags": ["sorting", "searching", "algorithms", "complexity"],
+    "difficulty": "Easy",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-greedy",
+    "title": "Greedy Algorithms and Tutorials - GeeksforGeeks",
+    "url": "https://www.geeksforgeeks.org/greedy-algorithms/",
+    "description": "Introduction to greedy programming paradigm with classic problems like Huffman Coding, fractional knapsack, and activity selection.",
+    "tags": ["greedy", "algorithms", "dsa"],
+    "difficulty": "Medium",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  },
+  {
+    "id": "gfg-oop",
+    "title": "Object-Oriented Programming (OOP) Concepts",
+    "url": "https://www.geeksforgeeks.org/object-oriented-programming-in-cpp/",
+    "description": "Introduction to core object-oriented programming principles: polymorphism, inheritance, encapsulation, and abstraction with class structures.",
+    "tags": ["oop", "polymorphism", "inheritance", "encapsulation", "classes"],
+    "difficulty": "Easy",
+    "source": "GeeksforGeeks",
+    "language": "General"
+  }
+]

@@ -9,6 +9,7 @@ from functools import lru_cache
 from typing import Any, TypedDict
 
 import aiohttp
+import chromadb
 from bs4 import BeautifulSoup
 from firebase_admin import firestore
 from google import genai
@@ -103,52 +104,6 @@ class ProfileParser:
                 profile[field] = answer_text
 
         return profile
-
-
-class QueryGenerator:
-    def generate(self, profile: dict[str, Any]) -> list[str]:
-        prompt = f"""
-        Based on this user profile, generate 10-15 specific search queries to find the best learning resources:
-
-        Name: {profile['name']}
-        Status: {profile['status']}
-        Education: {profile['education']}
-        Primary Language: {profile['primary_language']}
-        Tech Stack: {', '.join(profile['tech_stack'])}
-        Familiar Topics: {', '.join(profile['familiar_topics'])}
-        Weak Areas: {', '.join(profile['weak_areas'])}
-        Target Companies: {', '.join(profile['target_companies'])}
-        Preferred Role: {profile['preferred_role']}
-        Timeline: {profile['target_timeline']}
-        Preferred Resources: {', '.join(profile['preferred_resources'])}
-
-        Generate search queries that will help find:
-        1. Learning resources for weak areas
-        2. Interview preparation materials for target companies
-        3. Skill development content for preferred role
-        4. Practice problems and exercises
-        5. Technology-specific tutorials
-
-        Return only the search queries, one per line, without numbering or extra text.
-        Focus on actionable, specific queries that will yield good learning resources.
-        """
-
-        response_text = call_gemini(prompt)
-        if response_text:
-            queries = [q.strip() for q in response_text.split("\n") if q.strip()]
-            return queries[:15]
-        return self._fallback_queries(profile)
-
-    def _fallback_queries(self, profile: dict[str, Any]) -> list[str]:
-        fallback_queries: list[str] = []
-        for weak_area in profile["weak_areas"]:
-            fallback_queries.append(f"{weak_area} tutorial {profile['primary_language']}")
-            fallback_queries.append(f"{weak_area} interview questions")
-        for company in profile["target_companies"]:
-            fallback_queries.append(f"{company} {profile['preferred_role']} interview preparation")
-        for tech in profile["tech_stack"]:
-            fallback_queries.append(f"{tech} best practices tutorial")
-        return fallback_queries[:15]
 
 
 class GFGScraper:
@@ -289,96 +244,103 @@ class MetadataEnricher:
         return metadata
 
 
-class ResourceCategoriser:
-    CATEGORIES = [
-        "weak_areas_improvement",
-        "interview_preparation",
-        "skill_development",
-        "practice_problems",
-        "technology_tutorials",
-        "general_learning",
-    ]
-
-    def categorise(
-        self, resources: list[dict[str, Any]], profile: dict[str, Any]
-    ) -> dict[str, list[dict[str, Any]]]:
-        categories: dict[str, list[dict[str, Any]]] = {key: [] for key in self.CATEGORIES}
-
+class RoadmapPlanner:
+    def plan(self, profile: dict[str, Any]) -> dict[str, Any]:
         prompt = f"""
-        Categorize these resources based on the user profile:
+        Based on the user's profile, generate a personalized week-by-week learning syllabus for coding interview preparation.
+        Ensure it matches their primary programming language, target companies, role, tech stack, and timeline.
 
         User Profile:
-        - Weak Areas: {', '.join(profile['weak_areas'])}
-        - Target Companies: {', '.join(profile['target_companies'])}
-        - Preferred Role: {profile['preferred_role']}
-        - Tech Stack: {', '.join(profile['tech_stack'])}
+        - Name: {profile.get('name')}
+        - Status: {profile.get('status')}
+        - Education: {profile.get('education')}
+        - Primary Language: {profile.get('primary_language')}
+        - Tech Stack: {', '.join(profile.get('tech_stack', []))}
+        - Familiar Topics: {', '.join(profile.get('familiar_topics', []))}
+        - Weak Areas: {', '.join(profile.get('weak_areas', []))}
+        - Target Companies: {', '.join(profile.get('target_companies', []))}
+        - Preferred Role: {profile.get('preferred_role')}
+        - Target Timeline: {profile.get('target_timeline')}
 
-        Resources to categorize:
-        {json.dumps([{'title': r['title'], 'description': r.get('description', ''), 'tags': r.get('tags', [])} for r in resources], indent=2)}
+        Output a strict weekly roadmap structure based on their timeline.
+        Provide 2 to 4 key topics per week.
+        For each topic, provide a title, description, tags, and difficulty.
 
-        Assign each resource to one of these categories:
-        - weak_areas_improvement: Resources that help with user's weak areas
-        - interview_preparation: Resources for interview prep, especially for target companies
-        - skill_development: Resources for developing skills for preferred role
-        - practice_problems: Coding problems, exercises, challenges
-        - technology_tutorials: Tutorials for specific technologies in tech stack
-        - general_learning: Other valuable learning resources
-
-        Respond with ONLY a valid JSON object (no markdown, no code fences) mapping resource titles to categories:
+        Respond with ONLY a valid JSON object matching the schema below (no markdown formatting, no code fences):
         {{
-            "Resource Title 1": "category_name",
-            "Resource Title 2": "category_name"
+            "weeks": [
+                {{
+                    "week": 1,
+                    "topics": [
+                        {{
+                            "title": "Topic Title",
+                            "description": "Short explanation of what to learn",
+                            "tags": ["Tag1", "Tag2"],
+                            "difficulty": "Easy"
+                        }}
+                    ]
+                }}
+            ]
         }}
         """
-
         response_text = call_gemini(prompt)
         if response_text:
             try:
-                categorisation = json.loads(_strip_json_fences(response_text))
-                for resource in resources:
-                    category = categorisation.get(resource["title"], "general_learning")
-                    if category in categories:
-                        categories[category].append(resource)
-                    else:
-                        categories["general_learning"].append(resource)
-                return categories
+                cleaned = _strip_json_fences(response_text)
+                return json.loads(cleaned)
             except Exception:
-                logger.warning("Failed to parse Gemini categorisation response")
+                logger.warning("Failed to parse Gemini planner response, using fallback.")
+        return self._fallback_plan(profile)
 
-        return self._keyword_fallback(resources, profile)
-
-    def _keyword_fallback(
-        self, resources: list[dict[str, Any]], profile: dict[str, Any]
-    ) -> dict[str, list[dict[str, Any]]]:
-        categories: dict[str, list[dict[str, Any]]] = {key: [] for key in self.CATEGORIES}
-        for resource in resources:
-            title = resource.get("title", "").lower()
-            if any(weak.lower() in title for weak in profile["weak_areas"]):
-                categories["weak_areas_improvement"].append(resource)
-            elif any(company.lower() in title for company in profile["target_companies"]):
-                categories["interview_preparation"].append(resource)
-            elif "practice" in title or "problem" in title:
-                categories["practice_problems"].append(resource)
-            elif any(tech.lower() in title for tech in profile["tech_stack"]):
-                categories["technology_tutorials"].append(resource)
-            else:
-                categories["general_learning"].append(resource)
-        return categories
+    def _fallback_plan(self, profile: dict[str, Any]) -> dict[str, Any]:
+        weeks = []
+        topics_pool = list(profile.get("weak_areas", []))
+        if not topics_pool:
+            topics_pool = ["Data Structures", "Algorithms", "System Design"]
+        
+        for idx, topic in enumerate(topics_pool):
+            weeks.append({
+                "week": idx + 1,
+                "topics": [
+                    {
+                        "title": f"Fundamentals of {topic}",
+                        "description": f"Learn key concepts, complexity, and basic implementations of {topic}.",
+                        "tags": [topic, profile.get("primary_language", "Coding")],
+                        "difficulty": "Medium"
+                    },
+                    {
+                        "title": f"Advanced {topic} Problems",
+                        "description": f"Practice intermediate and advanced exercises for {topic}.",
+                        "tags": [topic, "Practice"],
+                        "difficulty": "Hard"
+                    }
+                ]
+            })
+        if not weeks:
+            weeks = [{
+                "week": 1,
+                "topics": [
+                    {
+                        "title": "Coding Interview Prep",
+                        "description": "General introduction and basic problem solving.",
+                        "tags": ["General"],
+                        "difficulty": "Easy"
+                    }
+                ]
+            }]
+        return {"weeks": weeks}
 
 
 _parser = ProfileParser()
-_query_gen = QueryGenerator()
 _enricher = MetadataEnricher()
-_categoriser = ResourceCategoriser()
+_planner = RoadmapPlanner()
 
 
 class AlgoGuideState(TypedDict):
     user_answers: list[dict]
     profile: dict
-    search_queries: list[str]
-    raw_resources: list[dict]
-    enriched_resources: list[dict]
-    categorized_resources: dict
+    roadmap_plan: dict
+    resources: list[dict]
     roadmap: dict
     error: str | None
 
@@ -394,22 +356,159 @@ async def parse_profile_node(state: AlgoGuideState) -> dict:
         return {"error": str(e)}
 
 
-async def generate_queries_node(state: AlgoGuideState) -> dict:
+async def roadmap_planner_node(state: AlgoGuideState) -> dict:
     if state.get("error"):
         return {}
     try:
-        queries = await asyncio.to_thread(_query_gen.generate, state["profile"])
-        return {"search_queries": queries}
+        plan = await asyncio.to_thread(_planner.plan, state["profile"])
+        return {"roadmap_plan": plan}
     except Exception as e:
-        logger.exception("Error in generate_queries_node")
+        logger.exception("Error in roadmap_planner_node")
         return {"error": str(e)}
 
 
-async def scrape_resources_node(state: AlgoGuideState) -> dict:
+class RAGRetriever:
+    def __init__(self):
+        self.client = chromadb.PersistentClient(path="chroma_db")
+        from sentence_transformers import SentenceTransformer
+        self.model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            self.collection = self.client.get_collection("algoguide_kb")
+        except Exception:
+            logger.warning("Collection 'algoguide_kb' not found. Seeding database...")
+            import subprocess
+            try:
+                # Run the indexing script automatically if db is missing
+                subprocess.run(["python", "index_resources.py"], check=True)
+                self.collection = self.client.get_collection("algoguide_kb")
+            except Exception as e:
+                logger.exception("Failed to run seed script automatically.")
+                raise e
+
+    def retrieve(self, query: str, language: str, limit: int = 6) -> list[dict]:
+        query_embedding = self.model.encode([query]).tolist()
+        
+        # Build where filter for metadata filtering
+        if language and language.strip().lower() != "general":
+            lang_mapping = {
+                "java": "Java",
+                "python": "Python",
+                "cpp": "C++",
+                "c++": "C++",
+                "javascript": "JavaScript",
+                "js": "JavaScript"
+            }
+            norm_lang = lang_mapping.get(language.strip().lower(), language)
+            where = {"$or": [{"language": "General"}, {"language": norm_lang}]}
+        else:
+            where = {"language": "General"}
+            
+        results = self.collection.query(
+            query_embeddings=query_embedding,
+            n_results=limit,
+            where=where
+        )
+        
+        retrieved = []
+        if results and results["ids"] and results["ids"][0]:
+            for idx in range(len(results["ids"][0])):
+                doc_id = results["ids"][0][idx]
+                metadata = results["metadatas"][0][idx]
+                document = results["documents"][0][idx]
+                distance = results["distances"][0][idx] if results.get("distances") else 1.0
+                retrieved.append({
+                    "id": doc_id,
+                    "title": metadata["title"],
+                    "url": metadata["url"],
+                    "description": metadata["description"],
+                    "tags": metadata["tags"].split(","),
+                    "difficulty": metadata["difficulty"],
+                    "source": metadata["source"],
+                    "language": metadata["language"],
+                    "distance": distance
+                })
+        return retrieved
+
+
+class RAGReranker:
+    def rerank(self, retrieved: list[dict], query: str, user_language: str, limit: int = 3) -> list[dict]:
+        scored = []
+        for doc in retrieved:
+            dist = doc["distance"]
+            if user_language and doc["language"].lower() == user_language.lower():
+                dist -= 0.1  # Boost matching language
+            scored.append((dist, doc))
+            
+        scored.sort(key=lambda x: x[0])
+        
+        # Select with source diversity
+        selected = []
+        seen_sources = set()
+        
+        for dist, doc in scored:
+            src = doc["source"]
+            if src not in seen_sources:
+                selected.append(doc)
+                seen_sources.add(src)
+            if len(selected) >= limit:
+                break
+                
+        if len(selected) < limit:
+            for dist, doc in scored:
+                if doc not in selected:
+                    selected.append(doc)
+                if len(selected) >= limit:
+                    break
+                    
+        return selected[:limit]
+
+
+_parser = ProfileParser()
+_enricher = MetadataEnricher()
+_planner = RoadmapPlanner()
+
+
+class AlgoGuideState(TypedDict):
+    user_answers: list[dict]
+    profile: dict
+    roadmap_plan: dict
+    resources: list[dict]
+    roadmap: dict
+    error: str | None
+
+
+async def parse_profile_node(state: AlgoGuideState) -> dict:
     if state.get("error"):
         return {}
     try:
-        raw_resources = []
+        profile = _parser.parse(state["user_answers"])
+        return {"profile": profile}
+    except Exception as e:
+        logger.exception("Error in parse_profile_node")
+        return {"error": str(e)}
+
+
+async def roadmap_planner_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        plan = await asyncio.to_thread(_planner.plan, state["profile"])
+        return {"roadmap_plan": plan}
+    except Exception as e:
+        logger.exception("Error in roadmap_planner_node")
+        return {"error": str(e)}
+
+
+async def retrieve_resources_node(state: AlgoGuideState) -> dict:
+    if state.get("error"):
+        return {}
+    try:
+        resources = []
+        retriever = RAGRetriever()
+        reranker = RAGReranker()
+        
+        weeks = state["roadmap_plan"].get("weeks", [])
+        user_lang = state["profile"].get("primary_language", "")
         timeout = aiohttp.ClientTimeout(total=12)
         headers = {
             "User-Agent": (
@@ -418,23 +517,65 @@ async def scrape_resources_node(state: AlgoGuideState) -> dict:
                 "Chrome/120.0.0.0 Safari/537.36"
             )
         }
-        async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
-            scraper = GFGScraper(session)
-            for query in state["search_queries"]:
-                logger.info("Searching for: %s", query)
-                urls = await scraper.search(query, max_results=3)
-                for url in urls:
-                    raw_resources.append({"query": query, "url": url})
-                if not urls:
-                    raw_resources.append({
-                        "query": query,
-                        "url": scraper._gfg_search_url(query),
-                        "is_fallback": True
-                    })
-                await asyncio.sleep(0.1)
-        return {"raw_resources": raw_resources}
+        
+        for w_idx, week in enumerate(weeks):
+            for t_idx, topic in enumerate(week.get("topics", [])):
+                topic_title = topic.get("title", "")
+                topic_desc = topic.get("description", "")
+                # Composite query combining title and description
+                query = f"{topic_title} {topic_desc}"
+                
+                logger.info("Retrieving resources via RAG for: %s", topic_title)
+                
+                # Fetch up to 6 matches from Chroma DB
+                candidates = await asyncio.to_thread(
+                    retriever.retrieve, query, user_lang, limit=6
+                )
+                
+                # Filter by distance threshold (L2/cosine distance closer to 0 is better)
+                THRESHOLD = 1.0
+                good_candidates = [c for c in candidates if c.get("distance", 1.0) <= THRESHOLD]
+                
+                # Re-rank to select the best 3 with diversity
+                best_resources = reranker.rerank(good_candidates, query, user_lang, limit=3)
+                
+                # Fallback to scraper if similarity is below threshold
+                if not best_resources:
+                    logger.info("RAG similarity below threshold. Falling back to GFG scraper for: %s", topic_title)
+                    async with aiohttp.ClientSession(timeout=timeout, headers=headers) as session:
+                        scraper = GFGScraper(session)
+                        urls = await scraper.search(f"{topic_title} tutorial {user_lang}", max_results=3)
+                        
+                        for url in urls:
+                            resources.append({
+                                "week_index": w_idx,
+                                "topic_index": t_idx,
+                                "query": query,
+                                "url": url,
+                                "title": f"{topic_title} - GeeksforGeeks",
+                                "description": f"GeeksforGeeks tutorial covering {topic_title}.",
+                                "tags": [topic_title, "GeeksforGeeks"],
+                                "difficulty": topic.get("difficulty", "Medium"),
+                                "source": "GeeksforGeeks",
+                                "is_fallback": True
+                            })
+                else:
+                    for doc in best_resources:
+                        resources.append({
+                            "week_index": w_idx,
+                            "topic_index": t_idx,
+                            "query": query,
+                            "url": doc["url"],
+                            "title": doc["title"],
+                            "description": doc["description"],
+                            "tags": doc["tags"],
+                            "difficulty": doc["difficulty"],
+                            "source": doc["source"],
+                            "is_fallback": False
+                        })
+        return {"resources": resources}
     except Exception as e:
-        logger.exception("Error in scrape_resources_node")
+        logger.exception("Error in retrieve_resources_node")
         return {"error": str(e)}
 
 
@@ -443,91 +584,114 @@ async def enrich_resources_node(state: AlgoGuideState) -> dict:
         return {}
     try:
         enriched_resources = []
-        for raw in state["raw_resources"]:
-            query = raw["query"]
-            url = raw["url"]
-            if raw.get("is_fallback"):
-                res = {
-                    "title": f"GeeksforGeeks search: {query}",
-                    "url": url,
-                    "description": f"GeeksforGeeks search results for {query}",
-                    "resource_type": "search",
-                    "difficulty": "beginner",
-                    "tags": query.split(),
-                    "created_at": datetime.utcnow().isoformat(),
-                    "query": query,
-                    "source": "geeksforgeeks_search_fallback",
-                }
-                enriched_resources.append(res)
-            else:
-                enriched = await asyncio.to_thread(_enricher.enrich, url, query)
-                if enriched:
-                    enriched_resources.append(enriched)
-                else:
-                    res = {
-                        "title": f"GeeksforGeeks: {query}",
-                        "url": url,
-                        "description": f"GeeksforGeeks article explaining {query}",
-                        "resource_type": "blog",
-                        "difficulty": "beginner",
-                        "estimated_time": 20,
-                        "tags": query.split(),
-                        "created_at": datetime.utcnow().isoformat(),
-                        "query": query,
-                        "source": "geeksforgeeks",
-                    }
-                    enriched_resources.append(res)
-        return {"enriched_resources": enriched_resources}
+        for res in state["resources"]:
+            w_idx = res["week_index"]
+            t_idx = res["topic_index"]
+            
+            enriched = {
+                "title": res.get("title", "Resource"),
+                "url": res.get("url", ""),
+                "description": res.get("description", ""),
+                "resource_type": "documentation" if res.get("source", "").lower() in ("java docs", "python docs", "c++ docs", "js docs", "roadmap.sh") else "blog",
+                "difficulty": res.get("difficulty", "Medium"),
+                "estimated_time": 20,
+                "tags": res.get("tags", []),
+                "created_at": datetime.utcnow().isoformat(),
+                "query": res.get("query", ""),
+                "source": res.get("source", "Unknown"),
+            }
+            
+            enriched.update({
+                "week_index": w_idx,
+                "topic_index": t_idx
+            })
+            enriched_resources.append(enriched)
+            
+        return {"resources": enriched_resources}
     except Exception as e:
         logger.exception("Error in enrich_resources_node")
         return {"error": str(e)}
 
 
-async def categorise_resources_node(state: AlgoGuideState) -> dict:
+async def attach_resources_node(state: AlgoGuideState) -> dict:
     if state.get("error"):
         return {}
     try:
-        categorised = await asyncio.to_thread(
-            _categoriser.categorise, state["enriched_resources"], state["profile"]
-        )
-        return {"categorized_resources": categorised}
-    except Exception as e:
-        logger.exception("Error in categorise_resources_node")
-        return {"error": str(e)}
-
-
-async def build_roadmap_node(state: AlgoGuideState) -> dict:
-    if state.get("error"):
-        return {}
-    try:
+        weeks = []
+        planned_weeks = state["roadmap_plan"].get("weeks", [])
+        
+        resource_map = {}
+        for res in state.get("resources", []):
+            key = (res["week_index"], res["topic_index"])
+            if key not in resource_map:
+                resource_map[key] = []
+            resource_map[key].append(res)
+            
+        for w_idx, week in enumerate(planned_weeks):
+            week_no = week.get("week", w_idx + 1)
+            topics = []
+            for t_idx, topic in enumerate(week.get("topics", [])):
+                key = (w_idx, t_idx)
+                matching = resource_map.get(key, [])
+                
+                primary_url = ""
+                resource_urls = []
+                test_urls = []
+                
+                if matching:
+                    first = matching[0]
+                    primary_url = first.get("url", "")
+                    resource_urls = [r.get("url") for r in matching if r.get("url")]
+                    
+                    for r in matching:
+                        url = r.get("url", "")
+                        if "leetcode" in url or "geeksforgeeks" in url:
+                            test_urls.append(url)
+                
+                if not primary_url:
+                    query = f"{topic.get('title')} tutorial {state['profile'].get('primary_language', 'Python')}"
+                    primary_url = f"https://www.geeksforgeeks.org/?s={urllib.parse.quote_plus(query)}"
+                    resource_urls = [primary_url]
+                
+                topics.append({
+                    "id": f"{week_no}-{t_idx}",
+                    "title": topic.get("title", f"Topic {t_idx + 1}"),
+                    "description": topic.get("description", ""),
+                    "resources": resource_urls,
+                    "tests": test_urls if test_urls else resource_urls,
+                    "tags": topic.get("tags", []),
+                    "difficulty": topic.get("difficulty", "Medium"),
+                    "url": primary_url
+                })
+            weeks.append({
+                "week": week_no,
+                "topics": topics
+            })
+            
         roadmap = {
             "user_profile": state["profile"],
-            "search_queries": state["search_queries"],
-            "total_resources": len(state["enriched_resources"]),
-            "resources": state["categorized_resources"],
+            "weeks": weeks,
             "generated_at": datetime.utcnow().isoformat(),
         }
         return {"roadmap": roadmap}
     except Exception as e:
-        logger.exception("Error in build_roadmap_node")
+        logger.exception("Error in attach_resources_node")
         return {"error": str(e)}
 
 
 workflow = StateGraph(AlgoGuideState)
 workflow.add_node("parse_profile", parse_profile_node)
-workflow.add_node("generate_queries", generate_queries_node)
-workflow.add_node("scrape_resources", scrape_resources_node)
+workflow.add_node("plan_roadmap", roadmap_planner_node)
+workflow.add_node("retrieve_resources", retrieve_resources_node)
 workflow.add_node("enrich_resources", enrich_resources_node)
-workflow.add_node("categorise_resources", categorise_resources_node)
-workflow.add_node("build_roadmap", build_roadmap_node)
+workflow.add_node("attach_resources", attach_resources_node)
 
 workflow.add_edge(START, "parse_profile")
-workflow.add_edge("parse_profile", "generate_queries")
-workflow.add_edge("generate_queries", "scrape_resources")
-workflow.add_edge("scrape_resources", "enrich_resources")
-workflow.add_edge("enrich_resources", "categorise_resources")
-workflow.add_edge("categorise_resources", "build_roadmap")
-workflow.add_edge("build_roadmap", END)
+workflow.add_edge("parse_profile", "plan_roadmap")
+workflow.add_edge("plan_roadmap", "retrieve_resources")
+workflow.add_edge("retrieve_resources", "enrich_resources")
+workflow.add_edge("enrich_resources", "attach_resources")
+workflow.add_edge("attach_resources", END)
 
 compiled_graph = workflow.compile()
 
@@ -537,10 +701,8 @@ class ResourcePipeline:
         initial_state = {
             "user_answers": user_answers,
             "profile": {},
-            "search_queries": [],
-            "raw_resources": [],
-            "enriched_resources": [],
-            "categorized_resources": {},
+            "roadmap_plan": {},
+            "resources": [],
             "roadmap": {},
             "error": None,
         }
